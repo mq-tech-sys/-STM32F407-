@@ -1,0 +1,305 @@
+/* ==========================================================================
+   全局样式 —— 浅色主题
+   白底 + 浅灰卡片 + 低饱和边框 + 单一主色（蓝）点缀
+   ========================================================================== */
+
+page {
+  background: #f5f6f8;
+  color: #1f2937;
+  font-size: 28rpx;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  line-height: 1.5;
+}
+
+.page {
+  padding: 24rpx 24rpx 48rpx;
+}
+
+/* ---------------- 卡片 ---------------- */
+
+.card {
+  background: #ffffff;
+  border: 1rpx solid #e8eaef;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.card-title {
+  font-size: 26rpx;
+  color: #6b7280;
+  margin-bottom: 16rpx;
+  font-weight: 500;
+}
+
+/* ---------------- 模式切换 ---------------- */
+
+.mode-bar {
+  display: flex;
+  background: #eceef2;
+  border-radius: 16rpx;
+  padding: 6rpx;
+  margin-bottom: 20rpx;
+}
+
+.mode-item {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 0;
+  font-size: 27rpx;
+  color: #6b7280;
+  border-radius: 12rpx;
+  transition: all 0.2s;
+}
+
+.mode-item.active {
+  background: #ffffff;
+  color: #2563eb;
+  font-weight: 600;
+  box-shadow: 0 2rpx 8rpx rgba(37, 99, 235, 0.12);
+}
+
+/* ---------------- 连接状态 ---------------- */
+
+.conn-row {
+  display: flex;
+  align-items: center;
+}
+
+.dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: #cbd5e1;
+  margin-right: 14rpx;
+  flex: none;
+}
+
+.dot.on {
+  background: #16a34a;
+}
+
+.dot.warn {
+  background: #f59e0b;
+}
+
+.conn-text {
+  font-size: 27rpx;
+  color: #374151;
+}
+
+.conn-sub {
+  font-size: 24rpx;
+  color: #9aa3b2;
+  margin-top: 8rpx;
+}
+
+/* ---------------- 门锁状态 ---------------- */
+
+.lock-card {
+  text-align: center;
+  padding: 44rpx 28rpx;
+}
+
+.lock-badge {
+  display: inline-block;
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  margin-bottom: 20rpx;
+  background: #eef1f6;
+  color: #64748b;
+}
+
+.lock-badge.unlock {
+  background: #e7f7ed;
+  color: #16a34a;
+}
+
+.lock-name {
+  font-size: 46rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+  color: #1f2937;
+}
+
+.lock-name.unlock {
+  color: #16a34a;
+}
+
+.lock-tip {
+  font-size: 24rpx;
+  color: #9aa3b2;
+  margin-top: 12rpx;
+}
+
+/* ---------------- 按钮 ---------------- */
+
+.btn {
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  padding: 24rpx 0;
+  margin: 0;
+  line-height: 1.3;
+  border: none;
+}
+
+.btn::after {
+  border: none;
+}
+
+.btn.primary {
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.btn.primary-hover {
+  background: #1d4ed8;
+}
+
+.btn.danger {
+  background: #ffffff;
+  color: #dc2626;
+  border: 1rpx solid #fecaca;
+}
+
+.btn.ghost {
+  background: #ffffff;
+  color: #2563eb;
+  border: 1rpx solid #c7d7f7;
+}
+
+.btn.plain {
+  background: #ffffff;
+  color: #374151;
+  border: 1rpx solid #e8eaef;
+}
+
+.btn[disabled] {
+  opacity: 0.45;
+}
+
+.btn-row {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.btn-row .btn {
+  flex: 1;
+}
+
+/* ---------------- 表单 ---------------- */
+
+.field {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f1f3f7;
+}
+
+.field:last-child {
+  border-bottom: none;
+}
+
+.field-label {
+  width: 210rpx;
+  flex: none;
+  font-size: 27rpx;
+  color: #4b5563;
+}
+
+.field-input {
+  flex: 1;
+  font-size: 27rpx;
+  color: #1f2937;
+  text-align: right;
+}
+
+.field-hint {
+  font-size: 22rpx;
+  color: #9aa3b2;
+  margin-top: 8rpx;
+  padding-left: 0;
+}
+
+/* ---------------- 日志 ---------------- */
+
+.log-box {
+  background: #fafbfc;
+  border: 1rpx solid #eef1f6;
+  border-radius: 12rpx;
+  padding: 18rpx;
+  max-height: 420rpx;
+  overflow-y: auto;
+}
+
+.log-line {
+  font-size: 23rpx;
+  color: #64748b;
+  font-family: Consolas, Menlo, monospace;
+  word-break: break-all;
+  padding: 4rpx 0;
+}
+
+.log-line.err {
+  color: #dc2626;
+}
+
+.log-line.rx {
+  color: #0f766e;
+}
+
+/* ---------------- 设备列表 ---------------- */
+
+.dev-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid #f1f3f7;
+}
+
+.dev-item:last-child {
+  border-bottom: none;
+}
+
+.dev-name {
+  font-size: 28rpx;
+  color: #1f2937;
+}
+
+.dev-meta {
+  font-size: 22rpx;
+  color: #9aa3b2;
+  margin-top: 6rpx;
+}
+
+.dev-connect {
+  font-size: 25rpx;
+  color: #2563eb;
+  padding: 8rpx 20rpx;
+  border: 1rpx solid #c7d7f7;
+  border-radius: 999rpx;
+}
+
+.empty {
+  text-align: center;
+  color: #9aa3b2;
+  font-size: 25rpx;
+  padding: 30rpx 0;
+}
+
+.section-gap {
+  height: 8rpx;
+}
+
+/* ---------------- 分组小标题 ---------------- */
+
+.group-head {
+  font-size: 25rpx;
+  color: #6b7280;
+  font-weight: 600;
+  padding: 8rpx 4rpx 14rpx;
+}

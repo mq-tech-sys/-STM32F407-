@@ -359,13 +359,13 @@
             <wLevel>0</wLevel>
             <uThumb>0</uThumb>
             <uSurpInc>0</uSurpInc>
-            <uC99>0</uC99>
+            <uC99>1</uC99>
             <useXO>0</useXO>
             <VariousControls>
               <MiscControls></MiscControls>
               <Define>STM32F40_41xxx,USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\CORE;..\SYSTEM\delay;..\SYSTEM\sys;..\SYSTEM\usart;..\USER;..\FWLIB\inc;..\HARDWARE\LED;..\FREERTOS\include;..\FREERTOS\port;..\HARDWARE\esp8266;..\HARDWARE\as608;..\HARDWARE\beep;..\HARDWARE\key;..\HARDWARE\keyboard;..\HARDWARE\LED;..\HARDWARE\oled;..\HARDWARE\servo;..\img;..\font;..\SYSTEM\tim;..\HARDWARE\bt24-hid;..\HARDWARE\mfrc522</IncludePath>
+              <IncludePath>..\CORE;..\SYSTEM\delay;..\SYSTEM\sys;..\SYSTEM\usart;..\USER;..\FWLIB\inc;..\HARDWARE\LED;..\FREERTOS\include;..\FREERTOS\port;..\HARDWARE\net;..\HARDWARE\as608;..\HARDWARE\beep;..\HARDWARE\key;..\HARDWARE\keyboard;..\HARDWARE\LED;..\HARDWARE\oled;..\HARDWARE\servo;..\img;..\font;..\SYSTEM\tim;..\HARDWARE\bt24-hid;..\HARDWARE\mfrc522</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -439,9 +439,19 @@
               <FilePath>..\HARDWARE\beep\beep.c</FilePath>
             </File>
             <File>
-              <FileName>esp8266.c</FileName>
+              <FileName>mqtt_packet.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\HARDWARE\esp8266\esp8266.c</FilePath>
+              <FilePath>..\HARDWARE\net\mqtt_packet.c</FilePath>
+            </File>
+            <File>
+              <FileName>bemfa_mqtt.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\net\bemfa_mqtt.c</FilePath>
+            </File>
+            <File>
+              <FileName>remote_cmd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\net\remote_cmd.c</FilePath>
             </File>
             <File>
               <FileName>key.c</FileName>

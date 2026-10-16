@@ -1,0 +1,85 @@
+<view class="page">
+
+  <!-- 连接状态条 -->
+  <view class="card">
+    <view class="conn-row">
+      <view class="dot {{online ? 'on' : ''}}"></view>
+      <text class="conn-text">{{online ? '已连接' : '未连接'}}</text>
+      <text class="conn-sub" style="margin-left:auto">{{mode === 'cloud' ? '云端 MQTT' : '蓝牙直连'}}</text>
+    </view>
+    <view wx:if="{{!online}}" class="conn-sub">请先去「控制」页建立连接</view>
+  </view>
+
+  <!-- 指纹 -->
+  <view class="group-head">指纹</view>
+  <view class="card">
+    <view class="field">
+      <text class="field-label">已录指纹</text>
+      <text class="field-input">{{fpCount}} 枚</text>
+    </view>
+    <view class="field-hint">录入需要人在门锁旁边操作：设备进入流程后，同一根手指连按两次。</view>
+    <view class="section-gap"></view>
+    <view class="btn-row">
+      <button class="btn primary" bindtap="onFpAdd">录入指纹</button>
+      <button class="btn plain" bindtap="onFpNum">刷新数量</button>
+    </view>
+    <button class="btn danger" bindtap="onFpDel">删除全部指纹</button>
+  </view>
+
+  <!-- RFID 卡 -->
+  <view class="group-head">RFID 卡片</view>
+  <view class="card">
+    <view class="field">
+      <text class="field-label">已登记卡</text>
+      <text class="field-input">{{cardCount}} 张</text>
+    </view>
+    <view class="field-hint">加卡对准设备上的 MFRC522 读头；最多 10 张。</view>
+    <view class="section-gap"></view>
+    <view class="btn-row">
+      <button class="btn primary" bindtap="onCardAdd">添加卡片</button>
+      <button class="btn plain" bindtap="onCardNum">刷新数量</button>
+    </view>
+    <button class="btn danger" bindtap="onCardDel">删除全部卡片</button>
+  </view>
+
+  <!-- 密码 -->
+  <view class="group-head">密码</view>
+  <view class="card">
+    <view class="field">
+      <text class="field-label">密码开锁</text>
+      <input class="field-input" type="number" maxlength="6" password="{{true}}"
+             placeholder="输入 1~6 位数字" value="{{password}}" bindinput="onPwdInput" />
+    </view>
+    <view class="section-gap"></view>
+    <button class="btn primary" bindtap="onPwdUnlock">用密码开锁</button>
+
+    <view class="section-gap"></view>
+    <view class="field">
+      <text class="field-label">修改开锁密码</text>
+      <input class="field-input" type="number" maxlength="6" password="{{true}}"
+             placeholder="设置新密码" value="{{newPassword}}" bindinput="onNewPwdInput" />
+    </view>
+    <view class="field-hint">改完只存在设备内存里，掉电重启会回到出厂默认密码。</view>
+    <view class="section-gap"></view>
+    <button class="btn ghost" bindtap="onPwdSet">提交新密码</button>
+  </view>
+
+  <!-- 调试 -->
+  <view class="group-head">调试</view>
+  <view class="card">
+    <view class="btn-row">
+      <button class="btn plain" bindtap="onPing">链路探测</button>
+      <button class="btn plain" bindtap="onHelp">命令列表</button>
+    </view>
+  </view>
+
+  <!-- 应答 -->
+  <view class="card">
+    <view class="card-title" bindtap="onClearAnswers">设备应答（点击清空，最新在上）</view>
+    <view class="log-box">
+      <view wx:if="{{answers.length === 0}}" class="empty">暂无应答</view>
+      <view wx:for="{{answers}}" wx:key="index" class="log-line rx">{{item.time}}  {{item.text}}</view>
+    </view>
+  </view>
+
+</view>

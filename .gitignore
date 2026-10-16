@@ -26,3 +26,8 @@ JLinkSettings.ini
 Thumbs.db
 desktop.ini
 *~
+
+# ---------- 自检产物 ----------
+tests/test_mqtt.exe
+tests/*.o
+tests/*.exe

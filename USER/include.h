@@ -6,7 +6,8 @@
 #include <string.h>
 #include "sys.h"
 #include "delay.h"
-#include "esp8266.h"
+#include "bemfa_mqtt.h"
+#include "remote_cmd.h"
 #include "usart.h"
 #include "servo.h"
 #include "keyboard.h"

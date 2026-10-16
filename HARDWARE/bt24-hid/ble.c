@@ -1,78 +1,59 @@
+/**
+  ******************************************************************************
+  * @ÎÄ¼ş     ble.c
+  * @ÕªÒª     À¶ÑÀ´®¿ÚÍ¸´«Á´Â·£º°ÑÊÕµ½µÄ×Ö½Ú°´ĞĞÇĞ·Öºó½»¸øÔ¶³ÌÃüÁî²ã
+  *
+  *   Ä£¿éÊÇ´®¿ÚÍ¸´«ĞÍÀ¶ÑÀ£¨JDY-24 Àà£©£¬ËùÒÔÕâÀïÖ»¸ºÔğ"×Ö½ÚÁ÷ -> ĞĞ"µÄ
+  *   ·ÖÖ¡£¬ÕæÕıµÄÃüÁî½âÎöÓëÖ´ĞĞÔÚ remote_cmd.c Àï£¬ºÍ WiFi/MQTT Á´Â·¹²ÓÃÍ¬Ò»·İ¡£
+  ******************************************************************************
+**/
+
 #include "ble.h"
 
-uint8_t g_ble_rx_buf[256];
-uint32_t g_ble_cnt;
+static char       s_line[BLE_LINE_MAX];
+static uint8_t    s_len;
+static TickType_t s_last_byte;
 
-void ble24_init()
+void ble24_init(void)
 {
+    s_len = 0;
+    s_last_byte = xTaskGetTickCount();
     usart3_init();
 }
 
-void ble24_send_str(char *str)
+static void flush_line(void)
 {
-    usart_send_string(USART3, str);
-}
-
-// è“ç‰™æ•°æ®å¤„ç†å‡½æ•°
-void ble_process_loop(void)
-{
-    uint8_t cmd;
-    uint8_t i;
-
-    if (!g_usart_event)
-    {
+    if (s_len == 0)
         return;
-    }
-
-    // æ‰“å°æ¥æ”¶åˆ°çš„åŸå§‹æ•°æ®ï¼ˆåå…­è¿›åˆ¶ï¼‰
-    printf("è“ç‰™æ”¶åˆ°çš„æ¶ˆæ¯(cnt=%d): ", g_ble_cnt);
-    for(i = 0; i < g_ble_cnt; i++)
-    {
-        printf("%02X ", g_ble_rx_buf[i]);
-    }
-    printf("| String: [%s]\r\n", g_ble_rx_buf);
-
-    // åªæœ‰æ”¶åˆ°çš„æ•°æ®ä¸å°‘äº 2 ä¸ªå­—ç¬¦æ‰å¤„ç†
-    if(g_ble_cnt >= 2)
-    {
-        // æ”¶åˆ° "on" - å¼€é”
-        if (strstr((char *)g_ble_rx_buf, "on") != NULL)
-        {
-            cmd = 1; // å¼€é”
-            xQueueSend(g_servo_queue, &cmd, pdMS_TO_TICKS(10));
-            printf("[BLE] Unlock command received!\r\n");
-        }
-        // æ”¶åˆ° "off" - ä¸Šé”
-        else if (strstr((char *)g_ble_rx_buf, "off") != NULL)
-        {
-            cmd = 0; // ä¸Šé”
-            xQueueSend(g_servo_queue, &cmd, pdMS_TO_TICKS(10));
-            printf("[BLE] Lock command received!\r\n");
-        }
-        else
-        {
-            printf("[BLE] Unknown command!\r\n");
-        }
-    }
-    else
-    {
-        printf("[BLE] Data too short, ignoring...\r\n");
-    }
-
-    // æ¸…ç©ºç¼“å†²åŒº
-    memset(g_ble_rx_buf, 0, sizeof(g_ble_rx_buf));
-    g_ble_cnt = 0;
-    g_usart_event = 0;
+    s_line[s_len] = '\0';
+    s_len = 0;
+    remote_cmd_handle_line(s_line);
 }
 
-void ble_send_lock_state(uint8_t state)
+void ble24_task(void)
 {
-    if (state)
+    uint8_t  buf[32];
+    uint16_t n, i;
+
+    n = uart3_read(buf, sizeof buf);
+    for (i = 0; i < n; i++)
     {
-        ble24_send_str("on\r\n");
+        char c = (char)buf[i];
+
+        s_last_byte = xTaskGetTickCount();
+
+        if (c == '\r' || c == '\n')
+        {
+            flush_line();
+            continue;
+        }
+        if (s_len >= BLE_LINE_MAX - 1)
+            flush_line();                 /* ĞĞÌ«³¤£¬ÏÈ´¦ÀíµôÔÙ¼ÌĞø */
+        s_line[s_len++] = c;
     }
-    else
-    {
-        ble24_send_str("off\r\n");
-    }
+
+    /* ¿ÕÏĞ³¬Ê±¶µµ×£ºÊÖ»ú¶Ë²»·¢»»ĞĞÊ±Ò²ÄÜÊ¶±ğ³öÒ»ÌõÍêÕûÃüÁî */
+    if (s_len > 0 &&
+        ((int32_t)(xTaskGetTickCount() - s_last_byte)) > (int32_t)pdMS_TO_TICKS(BLE_IDLE_FLUSH_MS))
+        flush_line();
 }

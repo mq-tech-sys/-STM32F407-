@@ -1,7 +1,9 @@
 /****************************************************************
 *    项目:基于STM32F407的智能指纹门锁
-*    作者:叶铭强
+*    作者:ymq
 *    硬件:STM32F407ZET6 + AS608指纹 + MFRC522(RFID) + ESP8266/蓝牙 + 0.96"OLED + SG90舵机
+*    通信:巴法云 MQTT（ESP8266 AT 透传 + STM32 侧自实现 MQTT 3.1.1 报文），
+*         或蓝牙串口透传，由 include.h 的 USART3_WIFI_USE / USART3_BLE_USE 二选一
 *    说明:
 *	1.独立按键（短按/长按/双击）
 *		短按  按键1=录入指纹   按键2=刷指纹     按键3=删除全部指纹
@@ -13,9 +15,10 @@
 *		1)指纹开锁
 *		2)密码开锁
 *		3)RFID刷卡开锁（自动轮询，仅已登记的卡有效）
-*		4)WiFi(巴法云) / 蓝牙 远程开锁，由 USART3_WIFI_USE / USART3_BLE_USE 二选一
+*		4)手机远程序列：巴法云MQTT 或 蓝牙，命令定义见 HARDWARE/net/remote_cmd.h
 *	4.任一时刻只允许一个"操作型"功能占用（g_mutex_function），
 *		开锁动作统一走 g_servo_queue 队列，串行驱动舵机
+*	5.远程命令与按键共用同一套事件标志组，所以"手机按一下"和"手按一下"走完全相同的代码路径
 *****************************************************************/
 #include "include.h"
 
@@ -139,11 +142,6 @@ static void task_init(void *pvParameters)
 
 	/* 初始化硬件 */
 	OLED_Init();
-#if USART3_WIFI_USE
-	esp8266_init();
-#elif USART3_BLE_USE
-	ble24_init();
-#endif
 	servo_init();
 	Beep_Init();
 	key_init();
@@ -152,6 +150,8 @@ static void task_init(void *pvParameters)
 	keyboard_init();
 	MFRC522_Initializtion();
 	OLED_Clear();
+	/* 注意：USART3（WiFi/蓝牙）的初始化放在各自的网络任务里，
+	 * 因为联网状态机依赖 FreeRTOS 的 tick 计数 */
 
 	/*创建任务*/
 	/* 创建oled任务 */
@@ -247,34 +247,29 @@ static void task_oled(void *pvParameters)
 }
 
 #if USART3_WIFI_USE
-/*esp8266任务*/
+/*巴法云 MQTT 任务*/
 static void task_esp8266(void *pvParameters)
 {
-	TickType_t last_heartbeat;
-	esp8266_connect();
-	last_heartbeat = xTaskGetTickCount();
+	/* 初始化放在任务里做：联网状态机要用 xTaskGetTickCount()，
+	 * 而 task_init 阶段调度器还没开始跑 */
+	bemfa_mqtt_init();
+
 	for (;;)
 	{
-		// 每10ms处理一次巴法云消息，控制响应
-		esp8266_bafa_loop();
+		/* 非阻塞状态机：联网、订阅、30s 心跳、断线重连都在里面按 tick 推进 */
+		bemfa_mqtt_task();
 		vTaskDelay(10);
-
-		// 每60秒发送一次心跳
-		if ((xTaskGetTickCount() - last_heartbeat) >= 60000)
-		{
-			esp8266_bafa_send_heartbeat();
-			last_heartbeat = xTaskGetTickCount();
-		}
 	}
 }
 #elif USART3_BLE_USE
 /*蓝牙任务*/
 static void task_ble24(void *pvParameters)
 {
+	ble24_init();
 	for (;;)
 	{
-		// 每10ms处理一次蓝牙消息
-		ble_process_loop();
+		/* 收字节 -> 按行切分 -> 交给 remote_cmd 处理 */
+		ble24_task();
 		vTaskDelay(10);
 	}
 }
@@ -309,11 +304,7 @@ static void task_servo(void *pvParameters)
 				g_lock_state = 1;
 				
 				// 上报门锁状态为开
-#if USART3_WIFI_USE
-				esp8266_bafa_send_lock_state(1);
-#elif USART3_BLE_USE
-				ble_send_lock_state(1);
-#endif
+				remote_cmd_report_state();
 
 				// 2秒后自动上锁
 				vTaskDelay(2000);
@@ -322,11 +313,7 @@ static void task_servo(void *pvParameters)
 				g_lock_state = 0;
 				
 				// 上报门锁状态为关
-#if USART3_WIFI_USE
-				esp8266_bafa_send_lock_state(0);
-#elif USART3_BLE_USE
-				ble_send_lock_state(0);
-#endif
+				remote_cmd_report_state();
 			}
 			else if (cmd == 0) // 关锁
 			{
@@ -335,11 +322,7 @@ static void task_servo(void *pvParameters)
 				g_lock_state = 0;
 				
 				// 上报门锁状态为关
-#if USART3_WIFI_USE
-				esp8266_bafa_send_lock_state(0);
-#elif USART3_BLE_USE
-				ble_send_lock_state(0);
-#endif
+				remote_cmd_report_state();
 			}
 		}
 	}
@@ -351,7 +334,11 @@ static void task_as608(void *pvParameters)
 	EventBits_t eb;
 	for (;;)
 	{
-		eb = xEventGroupWaitBits(g_event_group, EVENT_KEY1_SHORT | EVENT_KEY2_SHORT | EVENT_KEY3_SHORT | EVENT_KEY1_DOUBLE | EVENT_KEY2_DOUBLE | EVENT_KEY3_DOUBLE,
+		/* 只等自己会处理的事件位。
+		 * 注意：不能把 EVENT_KEY*_DOUBLE 也写进等待掩码 —— xEventGroupWaitBits
+		 * 用的是 xClearOnExit=pdTRUE，会把等待掩码里所有已置位的位清掉，
+		 * 而本任务根本不处理双击，那样会把 task_rfid 要用的"添加卡/删卡"事件吞掉。 */
+		eb = xEventGroupWaitBits(g_event_group, EVENT_KEY1_SHORT | EVENT_KEY2_SHORT | EVENT_KEY3_SHORT,
 								 pdTRUE, pdFALSE, portMAX_DELAY);
 
 		// 尝试获取功能互斥锁，获取失败说明其他功能正在执行，直接跳过

@@ -2,6 +2,7 @@
 
 > An STM32F407 + AS608 fingerprint sensor + MFRC522 RFID reader door lock firmware with **five unlock methods**: fingerprint, keypad password, RFID card, WiFi and Bluetooth.
 > Built on **FreeRTOS** with the ST Standard Peripheral Library (SPL), compiles and flashes from Keil MDK5.
+> Ships with a **WeChat mini program** for remote unlock and remote fingerprint / card management.
 
 [中文说明 (Chinese)](README.md)
 
@@ -14,12 +15,13 @@
 | Fingerprint | AS608 over UART; enroll / match / clear the template library, match score shown on screen |
 | Password | 6-digit password on a 4×4 matrix keypad, masked with `*` on the OLED, changeable at runtime |
 | RFID card | MFRC522 reader, up to 10 registered cards, **auto-polling**; unknown cards trigger a buzzer alarm |
-| WiFi | ESP8266 + Bemfa cloud (raw TCP); send `on` / `off` from the phone, lock state is reported back |
-| Bluetooth | Serial-transparent BLE module on the same UART; accepts `on` / `off` |
+| WiFi | ESP8266 + **Bemfa cloud MQTT**; the mini program sends commands and receives live lock state |
+| Bluetooth | BLE serial-transparent module; the phone connects directly from up to ~10 m, no internet needed |
 
 - 0.96" OLED showing lock / unlock icons and Chinese status messages
 - Servo auto-relocks **2 seconds** after unlocking, and the state is pushed to the phone
 - Buzzer feedback plus a full 115200 bps debug log over USART1
+- Mini program actions: unlock / lock / query state / enroll fingerprint / wipe fingerprints / add card / wipe cards / password unlock / change password
 
 ## Tech stack
 
@@ -28,14 +30,16 @@
 | MCU | STM32F407ZET6 @168 MHz, 512K Flash / 192K RAM |
 | Library | ST Standard Peripheral Library v1.4.0 (**not** HAL/LL) |
 | RTOS | FreeRTOS 10.x, preemptive, 1 kHz tick, heap_4, 75 KB heap |
-| Toolchain | Keil MDK 5 + ARMCC (AC5), project `USER/FreeRTOS.uvprojx` |
+| Toolchain | Keil MDK 5 + ARMCC (AC5), project `USER/FreeRTOS.uvprojx`, **C99 mode enabled** |
+| Cloud | Bemfa MQTT 3.1.1 (`bemfa.com:9501`); MQTT packets are built on the STM32 itself, the ESP8266 only does AT pass-through |
+| Mini program | Native WeChat mini program, no third-party deps; hand-written MQTT-over-WebSocket and BLE clients |
 
 ## Wiring
 
 | Module | Bus | Pins |
 | --- | --- | --- |
 | AS608 fingerprint | USART2 (57600) | PA2 / PA3 |
-| ESP8266 or BLE module | USART3 | PB10 / PB11 |
+| ESP8266 **or** BLE module | USART3 | PB10 / PB11 (mutually exclusive) |
 | MFRC522 | bit-banged SPI | SCK `PD7`, MOSI `PC6`, MISO `PC8`, CS `PD6`, RST `PC11` |
 | OLED SSD1306 | bit-banged I2C | SCL `PB15`, SDA `PD10` |
 | SG90 servo | TIM4_CH3 PWM 50 Hz | `PD14` |
@@ -44,7 +48,7 @@
 | 4×4 keypad | GPIO scan | rows `PB7` `PA4` `PG15` `PC7`, cols `PC9` `PB6` `PE6` `PA8` |
 | Debug UART | USART1 (115200) | PA9 / PA10 |
 
-## Controls
+## Local controls
 
 | Button | Short press | Double click | Long press |
 | --- | --- | --- | --- |
@@ -54,29 +58,42 @@
 
 Keypad: `0`–`9` input, `*` backspace, `#` submit.
 
+## Remote command set
+
+The phone and the device exchange plain ASCII lines. Both the MQTT and the BLE link share one parser (`HARDWARE/net/remote_cmd.c`), and every remote command is converted into the same event a physical key press would produce.
+
+**Phone → device:** `unlock`, `close`, `state`, `fp_add`, `fp_del`, `fp_num`, `card_add`, `card_del`, `card_num`, `pwd:<digits>`, `pwd_set:<digits>`, `ping`, `help`
+
+**Device → phone:** `state=lock` / `state=unlock`, `ack=...`, `num=fp,<n>` / `num=card,<n>`, `pong`, `err=unknown`
+
 ## Architecture
 
 One FreeRTOS task per hardware module, decoupled by event groups, queues and mutexes.
 
 ```
 key task ──set bits──▶ event group ──wait──▶ feature tasks
-                                                │
-                              g_mutex_function (exclusive human interaction)
-                                                │
-any unlock source ────────────────────▶ g_servo_queue ──▶ servo task (serialized)
+                                            ▲
+phone cmd ──▶ remote_cmd ──set bits─────────┘
+                           │
+                           └─ unlock ──▶ g_servo_queue ──▶ servo task (serialized)
 ```
 
-Every unlock source funnels into a single queue, so the servo is driven strictly one command at a time; `g_mutex_function` guarantees only one enrolment / password / card operation occupies the UI at any moment.
+Remote commands and key presses share the same event group, so a phone tap and a physical tap take exactly the same code path. Every unlock source funnels into one queue, so the servo is driven strictly one command at a time; MQTT outbound messages also go through a queue so concurrent tasks can never interleave a packet on USART3.
 
 ```
-CORE/       startup file + CMSIS
-FWLIB/      ST SPL (only the 8 drivers actually used are compiled)
-FREERTOS/   kernel + heap_4 + ARM_CM4F port
-HARDWARE/   as608, mfrc522, oled, esp8266, bt24-hid, keyboard, key, servo, beep, LED
-SYSTEM/     sys (bit-band GPIO), delay, usart, tim
-USER/       main.c, include.h, interrupts, Keil project
-img/        OLED lock/unlock bitmaps
-font/       16×16 Chinese font table (116 glyphs) + index
+CORE/          startup file + CMSIS
+FWLIB/         ST SPL (only the 8 drivers actually used are compiled)
+FREERTOS/      kernel + heap_4 + ARM_CM4F port
+HARDWARE/
+  net/         mqtt_packet.c  pure MQTT 3.1.1 codec (no hardware deps, unit-tested on PC)
+               bemfa_mqtt.c   Bemfa access: AT pass-through + non-blocking state machine + keepalive/reconnect
+               remote_cmd.c   shared remote command layer
+  as608/ mfrc522/ oled/ bt24-hid/ keyboard/ key/ servo/ beep/ LED/
+SYSTEM/        sys (bit-band GPIO), delay, usart (with a USART3 RX ring buffer), tim
+USER/          main.c, include.h, interrupts, Keil project
+img/ font/     OLED bitmaps, 16×16 Chinese font table
+mini-program/  WeChat mini program (control / features / settings pages)
+tests/         PC-side self-checks (no Keil needed)
 ```
 
 ## Build
@@ -86,19 +103,43 @@ font/       16×16 Chinese font table (116 glyphs) + index
 3. `Rebuild` → output in `OBJ/demo.axf` / `OBJ/demo.hex`
 4. Flash with J-Link / ST-Link
 
-> **Encoding note:** most Chinese comments in the sources are **GB2312** (Keil's default ANSI). Set your editor to `GB2312` when viewing, and keep that encoding when editing — saving as UTF-8 will corrupt the comments. `oled_show_string()` also relies on 2-byte GB2312 characters for its font lookup.
+> **C99 mode is enabled** in this project (Options for Target → C/C++ → C99 Mode). The new network layer uses C99 in-block declarations.
+
+> **Encoding note:** most Chinese comments in the sources are **GB2312** (Keil's default ANSI). Set your editor to `GB2312` when viewing, and keep that encoding when editing. `oled_show_string()` also relies on 2-byte GB2312 characters for its font lookup, so the sources must **not** be re-saved as UTF-8.
+
+### PC-side self-checks
+
+```bash
+sh tests/run_tests.sh    #  or tests\run_tests.bat on Windows
+```
+
+Three stages: the firmware MQTT codec unit test (104 assertions), the mini program MQTT client unit test (byte-for-byte comparison of the packets both implementations generate), and a `gcc -fsyntax-only` check of the new firmware modules against stub headers. The third stage is a syntax check only — it does not replace a real Keil build.
 
 ## Configuration
 
-Before first use, edit `HARDWARE/esp8266/esp8266.h` (WiFi SSID / password / Bemfa UID / topic), `HARDWARE/keyboard/keyboard.h` (default password) and pick WiFi or Bluetooth in `USER/include.h` via `USART3_WIFI_USE` / `USART3_BLE_USE`.
+- `HARDWARE/net/bemfa_mqtt.h` — WiFi SSID / password, Bemfa private key (`BAFA_UID`), topic, MQTT host/port/keepalive
+- `HARDWARE/keyboard/keyboard.h` — default password
+- `USER/include.h` — `USART3_WIFI_USE` / `USART3_BLE_USE` (mutually exclusive: USART3 has only one set of pins)
+
+## Mini program
+
+Open the `mini-program/` folder in WeChat DevTools. During development, tick *Details → Local settings → skip domain validation*; for release, add `wss://bemfa.com` to the socket domain whitelist in the mini program console. Two modes can be switched on the home page:
+
+- **Cloud MQTT** — `wss://bemfa.com:9504/wss`, works on any network (truly remote)
+- **BLE direct** — WeChat BLE APIs, works offline within ~10 m (BLE only; classic Bluetooth SPP modules such as HC-05 are not supported)
+
+> Never reuse the device's client ID (the Bemfa private key) for the mini program — MQTT kicks the older session when the same client ID connects twice.
 
 ## Known limitations
 
 - Passwords and registered cards live in RAM only — they reset on power loss (add an EEPROM/Flash to persist)
+- Device-to-cloud MQTT is plaintext on port 9501 (the phone-to-cloud leg uses encrypted `wss`); use 9503 + TLS for anything public
+- Remote unlock is protected only by topic secrecy — anyone with the private key and topic can send `unlock`
+- Disconnect detection relies on heartbeat silence: up to ~1.5 minutes before a reconnect is attempted
 - Card polling is throttled to one unlock per 5 seconds
-- Fingerprint library is capped at 100 templates and "delete" clears the whole library rather than a single ID
-- Remote unlock has no authentication beyond the cloud topic; suitable for demos and LAN use only
+- Fingerprint library is capped at 100 templates and "delete" clears the whole library
+- `fp_add` / `card_add` only make the device *wait*: the finger press or card tap must still happen at the device
 
 ## License
 
-[MIT](LICENSE) © 叶铭强 (YmqMQ)
+[MIT](LICENSE) © ymq

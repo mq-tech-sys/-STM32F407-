@@ -1,0 +1,2 @@
+/* index 页样式全部复用 app.wxss 的通用类 */
+.page { padding-bottom: 60rpx; }
