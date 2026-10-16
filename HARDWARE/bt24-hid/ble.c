@@ -13,7 +13,7 @@ void ble24_send_str(char *str)
     usart_send_string(USART3, str);
 }
 
-// �������ݴ�������
+// 蓝牙数据处理函数
 void ble_process_loop(void)
 {
     uint8_t cmd;
@@ -24,28 +24,28 @@ void ble_process_loop(void)
         return;
     }
 
-    // ��ӡ���յ���ԭʼ���ݣ�ʮ��������ʽ��
-    printf("�������յ���Ϣ(cnt=%d): ", g_ble_cnt);
+    // 打印接收到的原始数据（十六进制）
+    printf("蓝牙收到的消息(cnt=%d): ", g_ble_cnt);
     for(i = 0; i < g_ble_cnt; i++)
     {
         printf("%02X ", g_ble_rx_buf[i]);
     }
     printf("| String: [%s]\r\n", g_ble_rx_buf);
 
-    // ֻ�н��յ�����2���ַ��Ŵ���
+    // 只有收到的数据不少于 2 个字符才处理
     if(g_ble_cnt >= 2)
     {
-        // ����Ƿ��յ� "on" - ����
+        // 收到 "on" - 开锁
         if (strstr((char *)g_ble_rx_buf, "on") != NULL)
         {
-            cmd = 1; // ����
+            cmd = 1; // 开锁
             xQueueSend(g_servo_queue, &cmd, pdMS_TO_TICKS(10));
             printf("[BLE] Unlock command received!\r\n");
         }
-        // ����Ƿ��յ� "off" - ����
+        // 收到 "off" - 上锁
         else if (strstr((char *)g_ble_rx_buf, "off") != NULL)
         {
-            cmd = 0; // ����
+            cmd = 0; // 上锁
             xQueueSend(g_servo_queue, &cmd, pdMS_TO_TICKS(10));
             printf("[BLE] Lock command received!\r\n");
         }

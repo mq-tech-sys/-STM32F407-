@@ -1,28 +1,21 @@
 /****************************************************************
-*    项目:基于stm32f4的指纹智能门锁
+*    项目:基于STM32F407的智能指纹门锁
 *    作者:叶铭强
-*项目功能:
-*识 别 系:
-*	1.指纹模块识别和对数据库进行
-*	2.密码锁
-*	3.刷卡开锁
-*    4.wifi开锁
-*说  明:	
-*	1.按键使用
-*		1)按键1双击，执行指纹采集
-*		2)按键2双击，执行指纹匹配
-*		3)按键3双击，执行删除指纹
-*        
-*        4)按键1长按执行采集密码
-*        5)按键2长按执行修改密码
-*        
-*        6)按键1短按，执行添加rfid卡
-*        7)按键2短按，执行删除rfid卡
-*    2.开锁方式
-*        1)指纹解锁
-*        2)密码解锁
-*        3)rfid解锁
-*        4)蓝牙/wifi解锁
+*    硬件:STM32F407ZET6 + AS608指纹 + MFRC522(RFID) + ESP8266/蓝牙 + 0.96"OLED + SG90舵机
+*    说明:
+*	1.独立按键（短按/长按/双击）
+*		短按  按键1=录入指纹   按键2=刷指纹     按键3=删除全部指纹
+*		双击  按键1=添加RFID卡 按键2=删除全部卡
+*		长按  按键1=密码开锁   按键2=修改密码
+*	2.4x4矩阵键盘（密码输入 / 密码修改 / 键盘测试）
+*		* = 退格   # = 确认提交
+*	3.开锁方式
+*		1)指纹开锁
+*		2)密码开锁
+*		3)RFID刷卡开锁（自动轮询，仅已登记的卡有效）
+*		4)WiFi(巴法云) / 蓝牙 远程开锁，由 USART3_WIFI_USE / USART3_BLE_USE 二选一
+*	4.任一时刻只允许一个"操作型"功能占用（g_mutex_function），
+*		开锁动作统一走 g_servo_queue 队列，串行驱动舵机
 *****************************************************************/
 #include "include.h"
 
@@ -53,14 +46,6 @@ SemaphoreHandle_t g_mutex_printf;
 SemaphoreHandle_t g_mutex_rfid;
 /* 事件标志组 */
 EventGroupHandle_t g_event_group;
-
-///*RFID缓冲区*/
-//u8 mfrc552pidbuf[18];
-//u8 card_pydebuf[2];
-//u8 card_numberbuf[5];
-//u8 card_key0Abuf[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-//u8 card_writebuf[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-//u8 card_readbuf[18];
 
 CARD_UID g_card_list[10] = {0};
 uint8_t g_card_count = 0;
@@ -113,7 +98,8 @@ void dgb_printf_safe(const char *format, ...)
 }
 int main(void)
 {
-	uint32_t baud;
+	/* 调试串口波特率由 USART3 用途决定 */
+	uint32_t baud = 115200;
 #if USART3_WIFI_USE
 	baud = WIFI_BAUD;
 #elif USART3_BLE_USE

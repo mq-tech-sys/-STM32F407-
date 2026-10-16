@@ -59,13 +59,6 @@ extern SemaphoreHandle_t g_mutex_function; // »¥³âËø
 extern SemaphoreHandle_t g_mutex_printf;
 extern SemaphoreHandle_t g_mutex_rfid;
 
-//extern u8  mfrc552pidbuf[18];
-//extern u8  card_pydebuf[2];
-//extern u8  card_numberbuf[5];
-//extern u8  card_key0Abuf[6];
-//extern u8  card_writebuf[16];
-//extern u8  card_readbuf[18];
-
 typedef  struct
 {   
     uint8_t uid[4];

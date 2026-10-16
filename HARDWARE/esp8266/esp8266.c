@@ -26,7 +26,7 @@ void esp8266_connect(void)
     usart_send_string(USART3, "AT+RST\r\n");
     delay_ms(3000);
 
-    usart_send_string(USART3, "AT+CWJAP_DEF=\"ymq\",\"88888888\"\r\n");
+    usart_send_string(USART3, "AT+CWJAP_DEF=\"" WIFI_NAME "\",\"" WIFI_PASSWORD "\"\r\n");
     delay_ms(8000);
 
     usart_send_string(USART3, "AT+CIPSTART=\"TCP\",\"tcp.bemfa.com\",8344\r\n");
@@ -66,12 +66,12 @@ void esp8266_bafa_loop(void)
         {
             if (strstr(msg, "on"))
             {
-                cmd = 1;  // ����
+                cmd = 1;  // 开锁
                 xQueueSend(g_servo_queue, &cmd, pdMS_TO_TICKS(10));
             }
             else if (strstr(msg, "off"))
             {
-                cmd = 0;  // ����
+                cmd = 0;  // 上锁
                 xQueueSend(g_servo_queue, &cmd, pdMS_TO_TICKS(10));
             }
         }

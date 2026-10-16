@@ -1,0 +1,28 @@
+# ---------- Keil MDK 编译产物 ----------
+OBJ/*
+!OBJ/.gitkeep
+*.o
+*.crf
+*.d
+*.dep
+*.lnp
+*.sct
+*.map
+*.lst
+*.axf
+*.hex
+*.bin
+*.iex
+*.htm
+*.build_log.htm
+*_uvopt.bak
+*.uvguix.*
+JLinkLog.txt
+JLinkSettings.ini
+
+# ---------- 编辑器 / 系统 ----------
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+*~

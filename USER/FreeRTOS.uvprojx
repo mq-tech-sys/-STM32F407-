@@ -365,7 +365,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F40_41xxx,USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\CORE;..\SYSTEM\delay;..\SYSTEM\sys;..\SYSTEM\usart;..\USER;..\FWLIB\inc;..\HARDWARE\LED;..\FREERTOS\include;..\FREERTOS\port;..\HARDWARE\esp8266;..\HARDWARE\as608;..\HARDWARE\beep;..\HARDWARE\key;..\HARDWARE\keyboard;..\HARDWARE\LED;..\HARDWARE\oled;..\HARDWARE\rfid;..\HARDWARE\servo;..\img;..\font;..\SYSTEM\tim;..\HARDWARE\bt24-hid;..\HARDWARE\sr04;..\HARDWARE\mfrc522</IncludePath>
+              <IncludePath>..\CORE;..\SYSTEM\delay;..\SYSTEM\sys;..\SYSTEM\usart;..\USER;..\FWLIB\inc;..\HARDWARE\LED;..\FREERTOS\include;..\FREERTOS\port;..\HARDWARE\esp8266;..\HARDWARE\as608;..\HARDWARE\beep;..\HARDWARE\key;..\HARDWARE\keyboard;..\HARDWARE\LED;..\HARDWARE\oled;..\HARDWARE\servo;..\img;..\font;..\SYSTEM\tim;..\HARDWARE\bt24-hid;..\HARDWARE\mfrc522</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
