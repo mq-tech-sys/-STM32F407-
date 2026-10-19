@@ -127,29 +127,36 @@
       <view class="hint-text">必须是 <text class="strong">BLE（低功耗蓝牙）</text>模块。ESP8266 只有 WiFi、<text class="strong">没有蓝牙</text>；HC-05/06、JDY-31 这类经典蓝牙小程序也连不上。</view>
     </view>
 
-    <view class="section-gap"></view>
-    <button class="btn plain" bindtap="onShowUuids">
-      <view class="icon icon-sm i-terminal"></view>
-      <text>列出已连接设备的全部 UUID</text>
-    </button>
+    <view class="sub-head">诊断工具</view>
+    <view class="tool-panel">
+      <view class="tool-item" hover-class="tool-hover" bindtap="onShowUuids">
+        <view class="tool-ico"><view class="icon icon-sm i-terminal"></view></view>
+        <view class="tool-body">
+          <view class="tool-t">列出设备全部 UUID</view>
+          <view class="tool-d">读取服务与特征值，点结果直接填入</view>
+        </view>
+        <view class="icon icon-sm i-chev tool-chev"></view>
+      </view>
 
-    <view class="section-gap"></view>
-    <button class="btn plain" bindtap="onBleDiag">
-      <view class="icon icon-sm i-bt"></view>
-      <text>蓝牙自检（扫描不到设备时用）</text>
-    </button>
-
-    <view wx:if="{{bleDiag.length > 0}}" class="hint box">
-      <view class="hint-text">
-        <view wx:for="{{bleDiag}}" wx:key="index">{{item}}</view>
+      <view class="tool-item" hover-class="tool-hover" bindtap="onBleDiag">
+        <view class="tool-ico"><view class="icon icon-sm i-bt"></view></view>
+        <view class="tool-body">
+          <view class="tool-t">蓝牙自检</view>
+          <view class="tool-d">扫不到设备时用，逐项查权限与开关</view>
+        </view>
+        <view class="icon icon-sm i-chev tool-chev"></view>
       </view>
     </view>
 
+    <view wx:if="{{bleDiag.length > 0}}" class="diag-box">
+      <view wx:for="{{bleDiag}}" wx:key="index" class="diag-line">{{item}}</view>
+    </view>
+
     <view wx:if="{{uuidList.length > 0}}">
-      <view class="section-gap"></view>
+      <view class="sub-head">读到的特征值</view>
       <view wx:for="{{uuidList}}" wx:key="characteristicId" class="dev-item"
             data-index="{{index}}" bindtap="onUseUuid">
-        <view>
+        <view class="dev-main">
           <view class="dev-name">{{item.characteristicId}}</view>
           <view class="dev-meta">服务 {{item.serviceId}}</view>
           <view class="dev-meta">属性 {{item.properties}}</view>
@@ -160,13 +167,16 @@
   </view>
 
   <!-- 操作 -->
-  <button class="btn primary big" bindtap="onSave">
-    <view class="icon icon-md i-shield"></view>
-    <text>保存配置</text>
-  </button>
-  <view class="btn-row" style="margin-top:18rpx">
-    <button class="btn danger" bindtap="onReset">恢复默认</button>
-    <button class="btn plain" bindtap="onGotoControl">回到控制页</button>
+  <view class="save-area">
+    <button class="btn save big" bindtap="onSave">
+      <view class="icon icon-md i-check"></view>
+      <text>保存配置</text>
+    </button>
+    <view class="save-tip">配置只保存在本机，换手机要重新填一次</view>
+    <view class="btn-row">
+      <button class="btn sm danger" bindtap="onReset">恢复默认</button>
+      <button class="btn sm plain" bindtap="onGotoControl">回到控制页</button>
+    </view>
   </view>
 
   <!-- 说明 -->

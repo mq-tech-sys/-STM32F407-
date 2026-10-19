@@ -1,2 +1,136 @@
-/* 设置页：通用样式都在 app.wxss */
+/* 设置页：通用样式都在 app.wxss，这里只放本页专用 */
+
 .group-head { padding-top: 8rpx; }
+
+/* ---------------- 小节标题（细横线收尾） ---------------- */
+
+.sub-head {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  margin: 30rpx 2rpx 14rpx;
+  font-size: 23rpx;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 1rpx;
+}
+
+.sub-head::after {
+  content: "";
+  flex: 1;
+  height: 1rpx;
+  background: var(--line);
+}
+
+/* ---------------- 工具列表（替代原来的两个大按钮） ---------------- */
+
+.tool-panel {
+  border-radius: 20rpx;
+  background: var(--card-2);
+  border: 1rpx solid var(--line-2);
+  overflow: hidden;
+}
+
+.tool-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 22rpx 20rpx;
+  transition: background 0.15s;
+}
+
+/* 两条之间的分割线从图标右侧起，像系统设置里的分组列表 */
+.tool-item + .tool-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 92rpx;
+  right: 20rpx;
+  height: 2rpx;
+  background: var(--line);
+}
+
+.tool-hover { background: var(--primary-soft); }
+
+.tool-ico {
+  width: 56rpx;
+  height: 56rpx;
+  flex: none;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.tool-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.tool-t {
+  font-size: 27rpx;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.tool-d {
+  font-size: 22rpx;
+  color: var(--text-3);
+  line-height: 1.45;
+  margin-top: 6rpx;
+}
+
+.tool-chev {
+  flex: none;
+  width: 26rpx;
+  height: 26rpx;
+  color: var(--text-3);
+  opacity: 0.7;
+}
+
+/* ---------------- 自检结果 ---------------- */
+
+.diag-box {
+  margin-top: 16rpx;
+  padding: 6rpx 20rpx;
+  border-radius: 18rpx;
+  background: var(--card-2);
+  border: 1rpx solid var(--line-2);
+}
+
+.diag-line {
+  font-size: 22rpx;
+  color: var(--text-2);
+  line-height: 1.5;
+  padding: 12rpx 0;
+  border-bottom: 1rpx dashed var(--line-2);
+  word-break: break-all;
+}
+
+.diag-line:last-child { border-bottom: none; }
+
+/* ---------------- 设备 UUID 行 ---------------- */
+
+.dev-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------------- 底部操作区 ---------------- */
+
+.save-area {
+  margin-top: 30rpx;
+}
+
+.save-tip {
+  text-align: center;
+  font-size: 21rpx;
+  color: var(--text-3);
+  margin: 16rpx 0 20rpx;
+}
+
+.save-area .btn-row { margin-bottom: 0; }
