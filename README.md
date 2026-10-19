@@ -149,8 +149,9 @@ SYSTEM/        sys(GPIO 位带) / delay / usart(含 USART3 接收环形缓冲) /
 USER/          main.c（任务定义与调度）+ include.h + 中断服务 + Keil 工程
 img/           OLED 锁 / 解锁图标点阵
 font/          16×16 中文字库（116 字形）与索引表
-mini-program/  微信小程序（控制 / 功能 / 设置 三个页面）
+mini-program/  微信小程序（控制 / 功能 / 设置 三个页面，明暗双主题；图标在 images/）
 tests/         PC 端自检（不需要 Keil）
+tools/         辅助脚本（gen_tabbar_icons.py 生成小程序 tabBar 图标）
 ```
 
 ## 七、编译与烧录
@@ -184,17 +185,18 @@ tests\run_tests.bat /nopause     :: 不停，CI / 脚本里用这个
 sh tests/run_tests.sh
 ```
 
-三步：
+四步：
 
 1. 固件 MQTT 报文层单测（`tests/test_mqtt.c`，104 项断言：定长/变长剩余长度、拆包、粘包、非法报文重同步、缓冲越界防护……）
 2. 小程序 MQTT 客户端单测（`tests/test_mqtt_js.js`，会**逐字节比对**两份实现生成的 CONNECT / SUBSCRIBE / PUBLISH 报文是否完全一致）
-3. 固件新增模块语法自检（`gcc -fsyntax-only` + `tests/stub/` 里的假头文件，抓拼写和原型不匹配）
+3. 小程序界面静态检查（`tests/test_ui.js`，145 项：wxml 标签配对、`bindtap` 的方法是否存在、用到的 `i-*` 图标类是否定义、深浅两套主题的 CSS 变量是否齐全、`app.json` 里页面与 tabBar 图标文件是否都在）
+4. 固件新增模块语法自检（`gcc -fsyntax-only` + `tests/stub/` 里的假头文件，抓拼写和原型不匹配）
 
 全绿时最后会打印：
 
 ```
 ----------------------------------------------
- 全部通过（3/3）。
+ 全部通过（4/4）。
 ----------------------------------------------
 ```
 
@@ -243,6 +245,23 @@ sh tests/run_tests.sh
 2. AppID 填你自己的（或点「测试号」）；`project.config.json` 里默认写的是 `touristappid`
 3. 开发阶段勾选 **详情 → 本地设置 → 不校验合法域名、web-view、TLS 版本以及 HTTPS 证书**
    （正式发布要在小程序后台把 `wss://bemfa.com` 加进 **socket 合法域名**）
+
+### 界面：明暗双主题
+
+三个页面共用一套设计语言，配色全部走 CSS 变量，写在 `app.wxss` 的 `.theme-light` / `.theme-dark` 两个块里。
+
+- **切换方式**：控制页 / 功能页右上角的月亮·太阳按钮，或设置页「外观」里选浅色 / 深色
+- 主题存在本地，下次打开保持；切换时**导航栏、页面底色、tabBar 一起变**
+- 要换配色只改那两个变量块，页面样式不用碰
+
+图标分两套：
+
+| 位置 | 实现 | 说明 |
+| --- | --- | --- |
+| 页面内 | `app.wxss` 里的 `.i-*` 类（SVG data URI + `mask`） | 颜色取 `currentColor`，放在按钮里自动变白、放在标签里自动变主题色 |
+| tabBar | `images/tabbar/*.png` | 微信只认 png/jpg，图标由 `tools/gen_tabbar_icons.py` 用标准库按像素画出来（不需要装 Pillow） |
+
+> 改完界面建议跑一次 `tests\run_tests.bat`：第 3 步会检查 wxml 标签配对、`bindtap` 绑定的方法是否存在、图标类是否漏定义、主题变量是否两边都写全 —— 这些都是「一打开就白屏 / 点了没反应 / 图标不显示」的常见原因。
 
 ### 两种控制模式
 

@@ -1,4 +1,5 @@
 const { Channel } = require("./utils/channel.js");
+const theme = require("./utils/theme.js");
 
 App({
   globalData: {
@@ -6,6 +7,9 @@ App({
   },
 
   onLaunch() {
+    // 先把主题刷到系统 UI（导航栏 / tabBar），避免启动瞬间闪一下浅色
+    theme.chrome(theme.get());
+
     // 全局只建一个通道实例，三个页面共用同一条连接
     this.globalData.channel = new Channel();
     const cfg = this.globalData.channel.cfg;

@@ -1,84 +1,146 @@
-<view class="page">
+<view class="app theme-{{theme}}">
 
-  <!-- 连接状态条 -->
-  <view class="card">
-    <view class="conn-row">
-      <view class="dot {{online ? 'on' : ''}}"></view>
-      <text class="conn-text">{{online ? '已连接' : '未连接'}}</text>
-      <text class="conn-sub" style="margin-left:auto">{{mode === 'cloud' ? '云端 MQTT' : '蓝牙直连'}}</text>
+  <!-- 页头 -->
+  <view class="hd">
+    <view>
+      <view class="hd-title">功能</view>
+      <view class="hd-sub">{{online ? '已连接，可下发命令' : '未连接，请先去「控制」页'}}</view>
     </view>
-    <view wx:if="{{!online}}" class="conn-sub">请先去「控制」页建立连接</view>
+    <view class="hd-btn" bindtap="onToggleTheme">
+      <view class="icon icon-md {{theme === 'dark' ? 'i-sun' : 'i-moon'}}"></view>
+    </view>
+  </view>
+
+  <!-- 概览 -->
+  <view class="stats">
+    <view class="stat">
+      <view class="stat-label"><view class="icon icon-sm i-pulse"></view>已录指纹</view>
+      <view class="stat-num">{{fpCount}}<text class="stat-unit">枚</text></view>
+    </view>
+    <view class="stat">
+      <view class="stat-label"><view class="icon icon-sm i-card"></view>已登记卡</view>
+      <view class="stat-num">{{cardCount}}<text class="stat-unit">张</text></view>
+    </view>
   </view>
 
   <!-- 指纹 -->
-  <view class="group-head">指纹</view>
   <view class="card">
-    <view class="field">
-      <text class="field-label">已录指纹</text>
-      <text class="field-input">{{fpCount}} 枚</text>
+    <view class="card-hd">
+      <view class="ico-box"><view class="icon icon-md i-pulse"></view></view>
+      <view>
+        <view class="card-t">指纹</view>
+        <view class="card-d">录入时人要在门锁旁，同一根手指连按两次</view>
+      </view>
     </view>
-    <view class="field-hint">录入需要人在门锁旁边操作：设备进入流程后，同一根手指连按两次。</view>
-    <view class="section-gap"></view>
+
     <view class="btn-row">
       <button class="btn primary" bindtap="onFpAdd">录入指纹</button>
-      <button class="btn plain" bindtap="onFpNum">刷新数量</button>
+      <button class="btn plain" bindtap="onFpNum">
+        <view class="icon icon-sm i-refresh"></view>
+        <text>刷新数量</text>
+      </button>
     </view>
-    <button class="btn danger" bindtap="onFpDel">删除全部指纹</button>
+    <button class="btn danger sm" bindtap="onFpDel">删除全部指纹</button>
   </view>
 
-  <!-- RFID 卡 -->
-  <view class="group-head">RFID 卡片</view>
+  <!-- RFID -->
   <view class="card">
-    <view class="field">
-      <text class="field-label">已登记卡</text>
-      <text class="field-input">{{cardCount}} 张</text>
+    <view class="card-hd">
+      <view class="ico-box ok"><view class="icon icon-md i-card"></view></view>
+      <view>
+        <view class="card-t">RFID 卡片</view>
+        <view class="card-d">加卡时把卡贴到读卡器，最多 10 张</view>
+      </view>
     </view>
-    <view class="field-hint">加卡对准设备上的 MFRC522 读头；最多 10 张。</view>
-    <view class="section-gap"></view>
+
     <view class="btn-row">
       <button class="btn primary" bindtap="onCardAdd">添加卡片</button>
-      <button class="btn plain" bindtap="onCardNum">刷新数量</button>
+      <button class="btn plain" bindtap="onCardNum">
+        <view class="icon icon-sm i-refresh"></view>
+        <text>刷新数量</text>
+      </button>
     </view>
-    <button class="btn danger" bindtap="onCardDel">删除全部卡片</button>
+    <button class="btn danger sm" bindtap="onCardDel">删除全部卡片</button>
   </view>
 
   <!-- 密码 -->
-  <view class="group-head">密码</view>
   <view class="card">
+    <view class="card-hd">
+      <view class="ico-box warn"><view class="icon icon-md i-key"></view></view>
+      <view>
+        <view class="card-t">密码</view>
+        <view class="card-d">1~6 位数字，只存在设备内存</view>
+      </view>
+    </view>
+
     <view class="field">
       <text class="field-label">密码开锁</text>
       <input class="field-input" type="number" maxlength="6" password="{{true}}"
-             placeholder="输入 1~6 位数字" value="{{password}}" bindinput="onPwdInput" />
+             placeholder="输入密码" placeholder-class="ph"
+             value="{{password}}" bindinput="onPwdInput" />
     </view>
-    <view class="section-gap"></view>
-    <button class="btn primary" bindtap="onPwdUnlock">用密码开锁</button>
+    <view class="btn-row" style="margin-top:18rpx">
+      <button class="btn primary" bindtap="onPwdUnlock">
+        <view class="icon icon-sm i-unlock"></view>
+        <text>用密码开锁</text>
+      </button>
+    </view>
 
-    <view class="section-gap"></view>
     <view class="field">
-      <text class="field-label">修改开锁密码</text>
+      <text class="field-label">修改密码</text>
       <input class="field-input" type="number" maxlength="6" password="{{true}}"
-             placeholder="设置新密码" value="{{newPassword}}" bindinput="onNewPwdInput" />
+             placeholder="设置新密码" placeholder-class="ph"
+             value="{{newPassword}}" bindinput="onNewPwdInput" />
     </view>
-    <view class="field-hint">改完只存在设备内存里，掉电重启会回到出厂默认密码。</view>
-    <view class="section-gap"></view>
-    <button class="btn ghost" bindtap="onPwdSet">提交新密码</button>
+    <view class="hint box">
+      <view class="icon icon-sm i-alert" style="color:var(--warn)"></view>
+      <view class="hint-text">掉电重启会回到出厂默认密码 <text class="strong">123456</text></view>
+    </view>
+    <view class="btn-row" style="margin-top:18rpx">
+      <button class="btn ghost" bindtap="onPwdSet">提交新密码</button>
+    </view>
   </view>
 
   <!-- 调试 -->
-  <view class="group-head">调试</view>
   <view class="card">
+    <view class="card-hd">
+      <view class="ico-box"><view class="icon icon-md i-terminal"></view></view>
+      <view>
+        <view class="card-t">调试</view>
+        <view class="card-d">链路探测 / 查看设备支持的命令</view>
+      </view>
+    </view>
     <view class="btn-row">
-      <button class="btn plain" bindtap="onPing">链路探测</button>
-      <button class="btn plain" bindtap="onHelp">命令列表</button>
+      <button class="btn plain" bindtap="onPing">
+        <view class="icon icon-sm i-wifi"></view>
+        <text>链路探测</text>
+      </button>
+      <button class="btn plain" bindtap="onHelp">
+        <view class="icon icon-sm i-terminal"></view>
+        <text>命令列表</text>
+      </button>
     </view>
   </view>
 
   <!-- 应答 -->
   <view class="card">
-    <view class="card-title" bindtap="onClearAnswers">设备应答（点击清空，最新在上）</view>
+    <view class="card-hd">
+      <view class="ico-box"><view class="icon icon-md i-shield"></view></view>
+      <view>
+        <view class="card-t">设备应答</view>
+        <view class="card-d">最新在上</view>
+      </view>
+      <view class="card-hd-r" bindtap="onClearAnswers">
+        <view class="tag"><view class="icon icon-sm i-x"></view>清空</view>
+      </view>
+    </view>
+
     <view class="log-box">
       <view wx:if="{{answers.length === 0}}" class="empty">暂无应答</view>
-      <view wx:for="{{answers}}" wx:key="index" class="log-line rx">{{item.time}}  {{item.text}}</view>
+      <view wx:for="{{answers}}" wx:key="index" class="log-line rx">
+        <text class="log-time">{{item.time}}</text>
+        <text>{{item.text}}</text>
+      </view>
     </view>
   </view>
 

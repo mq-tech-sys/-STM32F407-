@@ -1,54 +1,94 @@
-<view class="page">
+<view class="app theme-{{theme}}">
+
+  <!-- 页头 -->
+  <view class="hd">
+    <view>
+      <view class="hd-title">智能门锁</view>
+      <view class="hd-sub">{{mode === 'cloud' ? '巴法云 · ' + (topic || '未设置主题') : (bleName || '蓝牙直连')}}</view>
+    </view>
+    <view class="hd-btn" bindtap="onToggleTheme">
+      <view class="icon icon-md {{theme === 'dark' ? 'i-sun' : 'i-moon'}}"></view>
+    </view>
+  </view>
 
   <!-- 通道切换 -->
-  <view class="mode-bar">
-    <view class="mode-item {{mode === 'cloud' ? 'active' : ''}}" data-mode="cloud" bindtap="onMode">云端 MQTT</view>
-    <view class="mode-item {{mode === 'ble' ? 'active' : ''}}" data-mode="ble" bindtap="onMode">蓝牙直连</view>
-  </view>
-
-  <!-- 连接状态 -->
-  <view class="card">
-    <view class="conn-row">
-      <view class="dot {{online ? 'on' : (connected ? 'warn' : '')}}"></view>
-      <text class="conn-text">{{online ? '已连接，可以下发命令' : (connected ? '连接中…' : '未连接')}}</text>
+  <view class="seg">
+    <view class="seg-item {{mode === 'cloud' ? 'active' : ''}}" data-mode="cloud" bindtap="onMode">
+      <view class="icon icon-sm i-cloud"></view>
+      <text>云端 MQTT</text>
     </view>
-    <view class="conn-sub">{{mode === 'cloud' ? '巴法云 MQTT（任意网络可用，真·远程）' : 'BLE 直连（需在门锁附近，约 10 米）'}}</view>
-    <view wx:if="{{bleServiceHint}}" class="conn-sub">特征值：{{bleServiceHint}}</view>
+    <view class="seg-item {{mode === 'ble' ? 'active' : ''}}" data-mode="ble" bindtap="onMode">
+      <view class="icon icon-sm i-bt"></view>
+      <text>蓝牙直连</text>
+    </view>
   </view>
 
-  <!-- 门锁状态 -->
-  <view class="card lock-card">
-    <view class="lock-badge {{lockState === 'unlock' ? 'unlock' : ''}}">
+  <!-- 状态主卡 -->
+  <view class="hero">
+    <view class="hero-top">
+      <view class="hero-pill">
+        <view class="hero-dot {{online ? 'on' : (connected ? 'warn' : '')}}"></view>
+        <text>{{online ? '在线' : (connected ? '连接中' : '离线')}}</text>
+      </view>
+      <view class="hero-pill">{{mode === 'cloud' ? '远程通道' : '近场通道'}}</view>
+    </view>
+
+    <view class="hero-ring {{lockState === 'unlock' ? 'open' : ''}}">
+      <view class="icon icon-xl {{lockState === 'unlock' ? 'i-unlock' : 'i-lock'}}"></view>
+    </view>
+
+    <view class="hero-state">
       {{lockState === 'unlock' ? '已开锁' : (lockState === 'lock' ? '已上锁' : '状态未知')}}
+      <text class="sub">{{lockState === 'unlock' ? '门锁已打开 · 2 秒后自动回锁' : (lockState === 'lock' ? '门锁已关闭' : '点下方「查询」获取当前状态')}}</text>
     </view>
-    <view class="lock-name {{lockState === 'unlock' ? 'unlock' : ''}}">
-      {{lockState === 'unlock' ? '门锁已打开' : (lockState === 'lock' ? '门锁已关闭' : '点下方按钮查询')}}
-    </view>
-    <view class="lock-tip">开锁后设备会在 2 秒后自动回锁</view>
   </view>
 
-  <!-- 操作按钮 -->
-  <view class="btn-row">
-    <button class="btn primary" bindtap="onUnlock">开 锁</button>
-    <button class="btn ghost" bindtap="onLock">上 锁</button>
-  </view>
-  <view class="btn-row">
-    <button class="btn plain" bindtap="onRefresh">查询状态</button>
-    <button class="btn plain" bindtap="onReconnect">重 连</button>
+  <!-- 操作 -->
+  <button class="btn primary big" bindtap="onUnlock">
+    <view class="icon icon-md i-unlock"></view>
+    <text>开 锁</text>
+  </button>
+
+  <view class="btn-row" style="margin-top:18rpx">
+    <button class="btn plain" bindtap="onLock">
+      <view class="icon icon-sm i-lock"></view>
+      <text>上锁</text>
+    </button>
+    <button class="btn plain" bindtap="onRefresh">
+      <view class="icon icon-sm i-refresh"></view>
+      <text>查询</text>
+    </button>
+    <button class="btn plain" bindtap="onReconnect">
+      <view class="icon icon-sm i-wifi"></view>
+      <text>重连</text>
+    </button>
   </view>
 
   <!-- 蓝牙设备列表 -->
   <block wx:if="{{mode === 'ble'}}">
-    <view class="card">
-      <view class="card-title">附近的 BLE 设备</view>
-      <view class="btn-row">
-        <button class="btn plain" bindtap="onScan">{{scanning ? '停止扫描' : '扫描设备'}}</button>
+    <view class="card" style="margin-top:22rpx">
+      <view class="card-hd">
+        <view class="ico-box"><view class="icon icon-md i-bt"></view></view>
+        <view>
+          <view class="card-t">附近的 BLE 设备</view>
+          <view class="card-d">{{scanning ? '正在扫描…' : '点右侧按钮搜索模块'}}</view>
+        </view>
+        <view class="card-hd-r" bindtap="onScan">
+          <view class="tag {{scanning ? 'warn' : ''}}">{{scanning ? '停止' : '扫描'}}</view>
+        </view>
       </view>
-      <view wx:if="{{devices.length === 0}}" class="empty">还没扫到设备，点上面的按钮开始扫描</view>
+
+      <view wx:if="{{bleServiceHint}}" class="hint box">
+        <view class="icon icon-sm i-shield" style="color:var(--ok)"></view>
+        <view class="hint-text">已识别特征值 {{bleServiceHint}}</view>
+      </view>
+
+      <view wx:if="{{devices.length === 0}}" class="empty">{{scanning ? '搜索中，请稍候…' : '还没有搜到设备'}}</view>
+
       <view wx:for="{{devices}}" wx:key="deviceId" class="dev-item">
         <view>
           <view class="dev-name">{{item.name || '(无名设备)'}}</view>
-          <view class="dev-meta">{{item.deviceId}} · RSSI {{item.rssi}}</view>
+          <view class="dev-meta">{{item.rssi}} dBm · {{item.deviceId}}</view>
         </view>
         <view class="dev-connect" data-id="{{item.deviceId}}" bindtap="onPickDevice">连接</view>
       </view>
@@ -56,11 +96,24 @@
   </block>
 
   <!-- 日志 -->
-  <view class="card">
-    <view class="card-title" bindtap="onClearLog">收发日志（点击清空，最新在上）</view>
+  <view class="card" style="margin-top:22rpx">
+    <view class="card-hd">
+      <view class="ico-box"><view class="icon icon-md i-terminal"></view></view>
+      <view>
+        <view class="card-t">收发日志</view>
+        <view class="card-d">最新在上，最多保留 40 条</view>
+      </view>
+      <view class="card-hd-r" bindtap="onClearLog">
+        <view class="tag"><view class="icon icon-sm i-x"></view>清空</view>
+      </view>
+    </view>
+
     <view class="log-box">
       <view wx:if="{{logs.length === 0}}" class="empty">暂无记录</view>
-      <view wx:for="{{logs}}" wx:key="index" class="log-line {{item.cls}}">{{item.time}}  {{item.text}}</view>
+      <view wx:for="{{logs}}" wx:key="index" class="log-line {{item.cls}}">
+        <text class="log-time">{{item.time}}</text>
+        <text>{{item.text}}</text>
+      </view>
     </view>
   </view>
 

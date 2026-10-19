@@ -1,4 +1,5 @@
 const store = require("../../utils/store.js");
+const theme = require("../../utils/theme.js");
 
 function ch() {
   return getApp().globalData.channel;
@@ -6,6 +7,7 @@ function ch() {
 
 Page({
   data: {
+    theme: "light",
     cfg: null,
     // 表单用平铺字段，避免 WXML 里写多层路径
     url: "",
@@ -25,6 +27,17 @@ Page({
 
   onLoad() {
     this.loadIntoForm();
+  },
+
+  onShow() {
+    this.setData({ theme: theme.sync() });
+  },
+
+  /* ------------------------------------------------------------ 外观 */
+
+  onPickTheme(e) {
+    const t = e.currentTarget.dataset.t;
+    this.setData({ theme: theme.set(t) });
   },
 
   loadIntoForm() {

@@ -1,3 +1,5 @@
+const theme = require("../../utils/theme.js");
+
 function ch() {
   return getApp().globalData.channel;
 }
@@ -10,10 +12,13 @@ function now() {
 
 Page({
   data: {
+    theme: "light",
     mode: "cloud",
     connected: false,
     online: false,
     lockState: "", // "" 未知 | "lock" 已上锁 | "unlock" 已开锁
+    topic: "",
+    bleName: "",
     logs: [],
     devices: [],
     scanning: false,
@@ -53,7 +58,27 @@ Page({
     c.on("device", this._hDev);
 
     this.addLog("通道：" + (c.mode === "cloud" ? "云端 MQTT" : "蓝牙直连"), "");
+    this.syncHeader();
     this.autoConnect();
+  },
+
+  onShow() {
+    this.setData({ theme: theme.sync() });
+    this.syncHeader();
+  },
+
+  /** 页头副标题：云端显示主题名，蓝牙显示设备名 */
+  syncHeader() {
+    const c = ch();
+    const ble = c.cfg && c.cfg.ble;
+    this.setData({
+      topic: (c.cfg && c.cfg.bemfa && c.cfg.bemfa.topic) || "",
+      bleName: (ble && ble.deviceName) || ""
+    });
+  },
+
+  onToggleTheme() {
+    this.setData({ theme: theme.toggle() });
   },
 
   onUnload() {

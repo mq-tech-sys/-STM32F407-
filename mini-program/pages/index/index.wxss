@@ -1,2 +1,2 @@
-/* index 页样式全部复用 app.wxss 的通用类 */
-.page { padding-bottom: 60rpx; }
+/* 控制页：通用样式都在 app.wxss，这里只放本页微调 */
+.hero { margin-bottom: 26rpx; }

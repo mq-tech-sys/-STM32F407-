@@ -8,7 +8,7 @@
     "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "智能门锁",
-    "backgroundColor": "#f5f6f8",
+    "backgroundColor": "#f4f6fb",
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
@@ -19,15 +19,21 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "控制"
+        "text": "控制",
+        "iconPath": "images/tabbar/tab-control.png",
+        "selectedIconPath": "images/tabbar/tab-control-on.png"
       },
       {
         "pagePath": "pages/features/features",
-        "text": "功能"
+        "text": "功能",
+        "iconPath": "images/tabbar/tab-features.png",
+        "selectedIconPath": "images/tabbar/tab-features-on.png"
       },
       {
         "pagePath": "pages/settings/settings",
-        "text": "设置"
+        "text": "设置",
+        "iconPath": "images/tabbar/tab-settings.png",
+        "selectedIconPath": "images/tabbar/tab-settings-on.png"
       }
     ]
   },

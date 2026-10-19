@@ -1,1 +1,2 @@
-/* settings 页样式复用 app.wxss */
+/* 设置页：通用样式都在 app.wxss */
+.group-head { padding-top: 8rpx; }

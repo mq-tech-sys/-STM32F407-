@@ -1,3 +1,5 @@
+const theme = require("../../utils/theme.js");
+
 function ch() {
   return getApp().globalData.channel;
 }
@@ -10,6 +12,7 @@ function now() {
 
 Page({
   data: {
+    theme: "light",
     mode: "cloud",
     online: false,
     password: "",
@@ -50,7 +53,11 @@ Page({
 
   onShow() {
     const c = ch();
-    this.setData({ online: c.isOnline() });
+    this.setData({ online: c.isOnline(), theme: theme.sync() });
+  },
+
+  onToggleTheme() {
+    this.setData({ theme: theme.toggle() });
   },
 
   /* ------------------------------------------------------------ 基础 */

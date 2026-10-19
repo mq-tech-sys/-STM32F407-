@@ -1,1 +1,2 @@
-/* features 页样式复用 app.wxss */
+/* 功能页：通用样式都在 app.wxss */
+.stats { margin-bottom: 26rpx; }

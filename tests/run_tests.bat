@@ -43,7 +43,7 @@ echo Node  : %NODE%
 echo.
 
 echo ==============================================
-echo  1/3  固件 MQTT 报文层单元测试
+echo  1/4  固件 MQTT 报文层单元测试
 echo ==============================================
 "%CC%" -std=c99 -Wall -Wextra -I HARDWARE\net tests\test_mqtt.c HARDWARE\net\mqtt_packet.c -o tests\test_mqtt.exe
 if errorlevel 1 goto :fail
@@ -52,14 +52,21 @@ if errorlevel 1 goto :fail
 
 echo.
 echo ==============================================
-echo  2/3  小程序 MQTT 客户端单元测试
+echo  2/4  小程序 MQTT 客户端单元测试
 echo ==============================================
 "%NODE%" tests\test_mqtt_js.js
 if errorlevel 1 goto :fail
 
 echo.
 echo ==============================================
-echo  3/3  固件新增模块语法自检（stub 头文件）
+echo  3/4  小程序界面静态检查（wxml / 图标 / 主题变量）
+echo ==============================================
+"%NODE%" tests\test_ui.js
+if errorlevel 1 goto :fail
+
+echo.
+echo ==============================================
+echo  4/4  固件新增模块语法自检（stub 头文件）
 echo ==============================================
 "%CC%" -fsyntax-only -std=c99 -Wall -Wextra -I tests\stub -I HARDWARE\net -I HARDWARE\bt24-hid HARDWARE\net\bemfa_mqtt.c HARDWARE\net\remote_cmd.c HARDWARE\bt24-hid\ble.c
 if errorlevel 1 goto :fail
@@ -67,8 +74,8 @@ echo   bemfa_mqtt.c / remote_cmd.c / ble.c  语法 ok
 
 echo.
 echo ----------------------------------------------
-echo  全部通过（3/3）。
-echo  注意：第 3 步只做语法检查，正式固件请到 Keil MDK 里 Rebuild 一次。
+echo  全部通过（4/4）。
+echo  注意：第 4 步只做语法检查，正式固件请到 Keil MDK 里 Rebuild 一次。
 echo ----------------------------------------------
 set "RC=0"
 goto :finish

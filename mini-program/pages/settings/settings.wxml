@@ -1,84 +1,133 @@
-<view class="page">
+<view class="app theme-{{theme}}">
+
+  <!-- 页头 -->
+  <view class="hd">
+    <view>
+      <view class="hd-title">设置</view>
+      <view class="hd-sub">配置保存在本机，改完点底部「保存」</view>
+    </view>
+  </view>
+
+  <!-- 外观 -->
+  <view class="card">
+    <view class="card-hd">
+      <view class="ico-box"><view class="icon icon-md {{theme === 'dark' ? 'i-moon' : 'i-sun'}}"></view></view>
+      <view>
+        <view class="card-t">外观</view>
+        <view class="card-d">切换后立即生效，下次打开保持</view>
+      </view>
+    </view>
+
+    <view class="theme-row">
+      <view class="theme-tile {{theme === 'light' ? 'on' : ''}}" data-t="light" bindtap="onPickTheme">
+        <view class="icon icon-md i-sun"></view>
+        <view class="t">浅色</view>
+      </view>
+      <view class="theme-tile {{theme === 'dark' ? 'on' : ''}}" data-t="dark" bindtap="onPickTheme">
+        <view class="icon icon-md i-moon"></view>
+        <view class="t">深色</view>
+      </view>
+    </view>
+  </view>
 
   <!-- 巴法云 -->
-  <view class="group-head">巴法云 MQTT（云端模式）</view>
+  <view class="group-head">巴法云 MQTT · 云端模式</view>
   <view class="card">
+    <view class="card-hd">
+      <view class="ico-box"><view class="icon icon-md i-cloud"></view></view>
+      <view>
+        <view class="card-t">连接参数</view>
+        <view class="card-d">小程序只能连加密 WebSocket</view>
+      </view>
+    </view>
+
     <view class="field">
       <text class="field-label">服务器</text>
       <input class="field-input" data-key="url" value="{{url}}" bindinput="onInput"
-             placeholder="wss://bemfa.com:9504/wss" />
+             placeholder="wss://bemfa.com:9504/wss" placeholder-class="ph" />
     </view>
     <view class="field">
       <text class="field-label">主题名</text>
       <input class="field-input" data-key="topic" value="{{topic}}" bindinput="onInput"
-             placeholder="与设备端一致，如 lock001" />
+             placeholder="与固件一致，如 lock001" placeholder-class="ph" />
     </view>
     <view class="field">
       <text class="field-label">ClientID</text>
       <input class="field-input" data-key="clientId" value="{{clientId}}" bindinput="onInput"
-             placeholder="随便起个独立的 ID，别填私钥" />
+             placeholder="独立 ID，别填私钥" placeholder-class="ph" />
     </view>
     <view class="field">
       <text class="field-label">用户名</text>
       <input class="field-input" data-key="username" value="{{username}}" bindinput="onInput"
-             placeholder="必填：巴法云 appID" />
+             placeholder="必填：appID" placeholder-class="ph" />
     </view>
     <view class="field">
       <text class="field-label">密码</text>
       <input class="field-input" data-key="password" value="{{password}}" bindinput="onInput"
-             placeholder="必填：巴法云 secretKey" password="{{true}}" />
+             placeholder="必填：secretKey" placeholder-class="ph" password="{{true}}" />
     </view>
     <view class="field">
       <text class="field-label">KeepAlive</text>
       <input class="field-input" type="number" data-key="keepalive" value="{{keepalive}}" bindinput="onInput" />
     </view>
 
-    <view class="field-hint">
-      · 服务器地址：小程序只能连 wss（加密 WebSocket），巴法云对应端口是 9504、路径 /wss。
+    <view class="hint box warn">
+      <view class="icon icon-sm i-alert"></view>
+      <view class="hint-text">
+        <text class="strong">ClientID 不能填巴法云私钥</text>——私钥是设备端在用的，同 ID 后连会把设备顶下线。
+      </view>
     </view>
-    <view class="field-hint">
-      · ClientID <text style="color:#dc2626">绝对不能填巴法云私钥</text>——私钥是设备端在用的，
-      同 ID 后连的会把设备顶下线。这里填个独立名字（如 wxmp_lock01）。
+
+    <view class="hint box">
+      <view class="icon icon-sm i-shield"></view>
+      <view class="hint-text">
+        巴法云规则：ClientID 不等于私钥时，必须用 appID / secretKey 认证。所以用户名填 appID、密码填 secretKey（巴法云「连接密钥」页复制），留空会连不上并返回 4/5。
+      </view>
     </view>
-    <view class="field-hint">
-      · 巴法云规则：<text style="color:#dc2626">ClientID 不等于私钥时，必须用 appID / secretKey 认证</text>。
-      所以上面的用户名填 <text style="color:#dc2626">appID</text>、密码填 <text style="color:#dc2626">secretKey</text>
-      （去巴法云「连接密钥」页复制），两个都别留空，否则连不上、返回码 4/5。
-    </view>
-    <view class="field-hint">· 设备端当前写死的私钥 / 主题：{{fwUid}} / {{fwTopic}}（改这里无效，要改固件头文件）</view>
+
+    <view class="hint">设备端固件里写死的私钥与主题：{{fwUid}} / {{fwTopic}}（改这里无效，要改固件头文件）</view>
 
     <view class="section-gap"></view>
-    <button class="btn plain" bindtap="onTestCloud">保存并立即试连</button>
+    <button class="btn plain" bindtap="onTestCloud">
+      <view class="icon icon-sm i-wifi"></view>
+      <text>保存并立即试连</text>
+    </button>
   </view>
 
   <!-- 蓝牙 -->
-  <view class="group-head">蓝牙 BLE（直连模式）</view>
+  <view class="group-head">蓝牙 BLE · 直连模式</view>
   <view class="card">
+    <view class="card-hd">
+      <view class="ico-box ok"><view class="icon icon-md i-bt"></view></view>
+      <view>
+        <view class="card-t">模块信息</view>
+        <view class="card-d">UUID 留空 = 自动识别</view>
+      </view>
+    </view>
+
     <view class="field">
       <text class="field-label">设备名过滤</text>
       <input class="field-input" data-key="nameFilter" value="{{nameFilter}}" bindinput="onInput"
-             placeholder="留空显示全部，如 JDY" />
+             placeholder="留空显示全部，如 JDY" placeholder-class="ph" />
     </view>
     <view class="field">
       <text class="field-label">Service UUID</text>
       <input class="field-input" data-key="serviceId" value="{{serviceId}}" bindinput="onInput"
-             placeholder="留空 = 自动识别" />
+             placeholder="留空 = 自动识别" placeholder-class="ph" />
     </view>
     <view class="field">
       <text class="field-label">特征值 UUID</text>
       <input class="field-input" data-key="characteristicId" value="{{characteristicId}}" bindinput="onInput"
-             placeholder="留空 = 自动识别" />
+             placeholder="留空 = 自动识别" placeholder-class="ph" />
     </view>
 
-    <view class="field-hint">
-      · 串口透传型 BLE 模块（JDY-24 之类）常见的是服务 0000FFE0、特征值 0000FFE1，直接留空也能自动识别。
-    </view>
-    <view class="field-hint">
-      · 如果提示识别不到可写特征值，先连上设备，再点下面的按钮把该模块的全部 UUID 列出来，点一行即可自动填入。
-    </view>
+    <view class="hint">串口透传模块（JDY-24 之类）常见服务 <text class="strong">0000FFE0</text>、特征值 <text class="strong">0000FFE1</text>，留空也能自动识别。</view>
 
     <view class="section-gap"></view>
-    <button class="btn plain" bindtap="onShowUuids">列出已连接设备的全部 UUID</button>
+    <button class="btn plain" bindtap="onShowUuids">
+      <view class="icon icon-sm i-terminal"></view>
+      <text>列出已连接设备的全部 UUID</text>
+    </button>
 
     <view wx:if="{{uuidList.length > 0}}">
       <view class="section-gap"></view>
@@ -95,24 +144,28 @@
   </view>
 
   <!-- 操作 -->
-  <button class="btn primary" bindtap="onSave">保存配置</button>
-  <view class="section-gap"></view>
-  <button class="btn danger" bindtap="onReset">恢复默认</button>
-  <view class="section-gap"></view>
-  <button class="btn plain" bindtap="onGotoControl">回到控制页</button>
+  <button class="btn primary big" bindtap="onSave">
+    <view class="icon icon-md i-shield"></view>
+    <text>保存配置</text>
+  </button>
+  <view class="btn-row" style="margin-top:18rpx">
+    <button class="btn danger" bindtap="onReset">恢复默认</button>
+    <button class="btn plain" bindtap="onGotoControl">回到控制页</button>
+  </view>
 
   <!-- 说明 -->
-  <view class="card" style="margin-top:20rpx">
-    <view class="card-title">两种模式怎么选</view>
-    <view class="field-hint">
-      · <text style="color:#1f2937">云端 MQTT</text>：手机在任何网络都能开锁，走巴法云转发。需要设备端用的是 ESP8266（固件里 USART3_WIFI_USE = 1）。
+  <view class="card" style="margin-top:22rpx">
+    <view class="card-hd">
+      <view class="ico-box"><view class="icon icon-md i-gear"></view></view>
+      <view>
+        <view class="card-t">两种模式怎么选</view>
+        <view class="card-d">取决于板子上插的是哪个模块</view>
+      </view>
     </view>
-    <view class="field-hint">
-      · <text style="color:#1f2937">蓝牙直连</text>：手机必须站在门锁附近（约 10 米），不经云端，断网也能用。需要设备端接的是 BLE 模块（固件里 USART3_BLE_USE = 1）。
-    </view>
-    <view class="field-hint">
-      · 设备端 USART3 同一时刻只能接一个模块，所以两种模式对应两份固件配置，不能在同一块板子上同时用。
-    </view>
+
+    <view class="hint"><text class="strong">云端 MQTT</text>：手机在任何网络都能开锁，走巴法云转发。设备端要插 ESP8266（固件 USART3_WIFI_USE = 1）。</view>
+    <view class="hint"><text class="strong">蓝牙直连</text>：手机需在门锁约 10 米内，不经云端，断网也能用。设备端要插 BLE 模块（固件 USART3_BLE_USE = 1）。</view>
+    <view class="hint">USART3 同一时刻只能接一个模块，两种模式对应两份固件配置，不能同时用。</view>
   </view>
 
 </view>
