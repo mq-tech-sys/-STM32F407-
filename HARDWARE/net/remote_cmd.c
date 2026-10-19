@@ -36,6 +36,28 @@ static const char *match(const char *line, const char *cmd)
     return NULL;
 }
 
+/**
+ * @brief  收到的内容是不是"设备自己会发出的应答"
+ * @note   同一个主题上如果有两台设备（或 broker 把消息回投给发布者），
+ *         这些应答会被当成命令收回来。一旦对它们回 err=unknown + help=，
+ *         两台设备就会互刷成死循环，很快把流量和内存打满。
+ */
+static uint8_t is_reply_line(const char *line)
+{
+    static const char *const prefixes[] = {
+        "ack=", "state=", "num=", "help=", "err=",
+        "fp=", "fpend=", "card=", "cardend="
+    };
+    size_t i;
+
+    for (i = 0; i < sizeof(prefixes) / sizeof(prefixes[0]); i++)
+    {
+        if (strncmp(line, prefixes[i], strlen(prefixes[i])) == 0)
+            return 1;
+    }
+    return (strcmp(line, "pong") == 0) ? 1 : 0;
+}
+
 /** 把定长数字口令复制到 buf，返回 1 表示格式合法（非空且全是数字） */
 static uint8_t copy_digits(const char *src, char *buf, size_t cap)
 {
@@ -176,6 +198,14 @@ void remote_cmd_handle_line(char *line)
         return;
 
     printf("[REMOTE] cmd=<%s>\r\n", line);
+
+    /* 自己（或另一台同主题设备）发的回包被投回来了，不能再回一次。
+     * 否则 err=unknown 和 help=... 会互相触发，形成无限循环。 */
+    if (is_reply_line(line))
+    {
+        printf("[REMOTE] 忽略回投的应答: %s\r\n", line);
+        return;
+    }
 
     /* ---------------- 开锁 / 上锁 ---------------- */
     if (strcmp(line, "unlock") == 0 || strcmp(line, "open") == 0 || strcmp(line, "on") == 0)
