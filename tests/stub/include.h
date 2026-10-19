@@ -49,6 +49,8 @@ int         xQueueReceive(QueueHandle_t q, void *item, TickType_t wait);
 EventBits_t xEventGroupSetBits(EventGroupHandle_t g, EventBits_t bits);
 EventBits_t xEventGroupWaitBits(EventGroupHandle_t g, EventBits_t bits,
                                 int clear, int wait_all, TickType_t wait);
+int         xSemaphoreTake(SemaphoreHandle_t s, TickType_t wait);
+int         xSemaphoreGive(SemaphoreHandle_t s);
 
 /* ---- 串口（真实实现只在 SYSTEM/usart） ---- */
 typedef struct { uint32_t SR; uint32_t DR; } USART_TypeDef;
@@ -72,6 +74,7 @@ extern EventGroupHandle_t g_event_group;
 extern QueueHandle_t      g_servo_queue;
 extern uint8_t            g_lock_state;
 extern uint8_t            g_card_count;
+extern SemaphoreHandle_t  g_mutex_function;
 extern char               g_password[];
 
 #define PASSWORD_MAX_LEN 6
@@ -88,7 +91,17 @@ extern char               g_password[];
 #define EVENT_KEY3_DOUBLE (1 << 8)
 
 /* ---- AS608 ---- */
-u8 PS_ValidTempleteNum(u16 *ValidN);
+u8  PS_ValidTempleteNum(u16 *ValidN);
+u8  PS_LoadChar(u8 BufferID, u16 PageID);   /* 0x07 装载模板 */
+u8  fp_has_id(u16 id);
+u8  fp_delete_id(u16 id);
+u8  fp_first_free_id(u16 *id);
+u16 fp_capacity(void);
+
+/* ---- MFRC522 / 卡列表 ---- */
+typedef struct { uint8_t uid[4]; } CARD_UID;
+extern CARD_UID g_card_list[10];
+uint8_t delete_card_by_index(uint8_t idx);
 
 /* ---- 网络层（真实定义在各自的头文件里） ---- */
 void  remote_cmd_on_online(void);

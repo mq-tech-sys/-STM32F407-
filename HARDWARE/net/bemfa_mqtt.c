@@ -18,7 +18,10 @@
 /** 待发送消息队列：其他任务（如舵机任务）上报状态时先入队，
  *  由本任务统一出队发送，避免多任务同时往 USART3 写导致报文交错 */
 #define BEMFA_TX_QUEUE_LEN 4
-#define BEMFA_TX_MSG_MAX   64
+/* 单条消息上限：help 命令列表已经超过 64 字节，太小会被静默截断 */
+#define BEMFA_TX_MSG_MAX   160
+/* 收到的命令按 remote_cmd 的行缓冲上限截断即可 */
+#define BEMFA_RX_LINE_MAX  64
 
 typedef enum
 {
@@ -159,7 +162,7 @@ static void on_message(const mqtt_msg_t *m)
 
     if (m->type == MQTT_TYPE_PUBLISH)
     {
-        char line[BEMFA_TX_MSG_MAX];
+        char line[BEMFA_RX_LINE_MAX];
         size_t n;
 
         if (mqtt_publish_split(m, topic, sizeof topic, &pl, &pll) != 0)

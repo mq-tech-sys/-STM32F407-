@@ -592,6 +592,27 @@ void delete_all_cards(void)
 	lock_icon(g_image_dot_tbl[2].address);
 }
 
+// 删除指定索引的卡（索引与 card_list 上报的编号一致），返回 1 表示成功
+uint8_t delete_card_by_index(uint8_t idx)
+{
+	uint8_t i;
+
+	if (idx >= g_card_count)
+		return 0;
+
+	// 后面的卡依次前移，保持列表连续（上报的编号才不会跳号）
+	for (i = idx; i + 1 < g_card_count; i++)
+	{
+		memcpy(g_card_list[i].uid, g_card_list[i + 1].uid, 4);
+	}
+	memset(g_card_list[g_card_count - 1].uid, 0, 4);
+	g_card_count--;
+
+	dgb_printf_safe("[RFID] 已删除第 %u 张卡，剩余 %u 张\r\n",
+					(unsigned)idx, (unsigned)g_card_count);
+	return 1;
+}
+
 static uint8_t g_rfid_cmd = 1   ; // 全局变量，确保不会被破坏！
 
 // 刷卡验证（匹配卡开门）

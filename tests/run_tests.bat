@@ -52,11 +52,13 @@ if errorlevel 1 goto :fail
 
 echo.
 echo ==============================================
-echo  2/4  小程序单元测试（MQTT 客户端 + 蓝牙扫描）
+echo  2/4  小程序单元测试（MQTT / 蓝牙 / 功能页）
 echo ==============================================
 "%NODE%" tests\test_mqtt_js.js
 if errorlevel 1 goto :fail
 "%NODE%" tests\test_ble.js
+if errorlevel 1 goto :fail
+"%NODE%" tests\test_features.js
 if errorlevel 1 goto :fail
 
 echo.

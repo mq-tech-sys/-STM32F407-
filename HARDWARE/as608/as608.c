@@ -160,7 +160,15 @@ void Add_FR(void)
 				lock_icon(g_image_dot_tbl[2].address);
 				return;
 			}
-			ID = ValidN; // ???????????????0?????
+			/* 取第一个空位分配 ID：删过中间某个指纹后，直接用 ValidN 会覆盖已有模板 */
+			if (!fp_first_free_id(&ID))
+			{
+				OLED_Clear();
+				oled_show_string(9, 4, "指纹库已满!!");
+				delay_ms(1500);
+				lock_icon(g_image_dot_tbl[2].address);
+				return;
+			}
 			ensure = PS_StoreChar(CharBuffer2, ID);
 			if (ensure == 0x00)
 			{
@@ -169,7 +177,7 @@ void Add_FR(void)
 				printf("录入指纹成功\r\n");
 
 				PS_ValidTempleteNum(&ValidN); // 读库指纹个数
-				printf("读库指纹个数:%d\r\n", AS608Para.PS_max - ValidN);
+				printf("读库指纹个数:%d\r\n", (int)ValidN);
 				delay_ms(1500);
 				lock_icon(g_image_dot_tbl[2].address);
 			
@@ -885,4 +893,82 @@ const char *EnsureMessage(u8 ensure)
 			p="模块返回确认码有误";break;
 	}
  return p;	
+}
+
+
+/* ==========================================================================
+ * 按 ID 管理指纹
+ *
+ * AS608 没有"列出所有模板"的命令，只能对每个编号发 PS_LoadChar 探测：
+ * 返回确认码 0x00 说明该编号上有模板，其它（0x0C 模板为空 / 0x1A 等）视为空位。
+ * 编号上限用 AS608Para.PS_max（本项目录入时固定为 100）。
+ * ========================================================================== */
+
+u16 fp_capacity(void)
+{
+    u16 max = AS608Para.PS_max;
+
+    if (max == 0 || max > 500)
+        max = 100;              /* 还没读过模块参数时按 100 处理 */
+    return max;
+}
+
+/* 装载模板 0x07：只读 Flash，不会改动指纹库 */
+u8 PS_LoadChar(u8 BufferID, u16 PageID)
+{
+    u16 temp;
+    u8  ensure;
+    u8  *data;
+
+    SendHead();
+    SendAddr();
+    SendFlag(0x01);             /* 命令包标识 */
+    SendLength(0x06);
+    Sendcmd(0x07);
+    MYUSART_SendData(BufferID);
+    MYUSART_SendData(PageID >> 8);
+    MYUSART_SendData(PageID);
+    temp = 0x01 + 0x06 + 0x07 + BufferID
+         + (PageID >> 8) + (u8)PageID;
+    SendCheck(temp);
+
+    data = JudgeStr(2000);
+    if (data)
+        ensure = data[9];
+    else
+        ensure = 0xff;
+    return ensure;
+}
+
+u8 fp_has_id(u16 id)
+{
+    return (PS_LoadChar(CharBuffer1, id) == 0x00) ? 1 : 0;
+}
+
+u8 fp_delete_id(u16 id)
+{
+    if (id >= fp_capacity())
+        return 0;
+    if (!fp_has_id(id))
+        return 0;               /* 这个编号本来就没指纹 */
+
+    return (PS_DeletChar(id, 1) == 0x00) ? 1 : 0;
+}
+
+u8 fp_first_free_id(u16 *id)
+{
+    u16 i, max = fp_capacity();
+
+    if (id == NULL)
+        return 0;
+
+    for (i = 0; i < max; i++)
+    {
+        if (PS_LoadChar(CharBuffer1, i) != 0x00)
+        {
+            *id = i;
+            return 1;
+        }
+    }
+    return 0;
 }

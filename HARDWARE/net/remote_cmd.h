@@ -14,9 +14,13 @@
   *     state               查询门锁状态
   *     fp_add              进入录入指纹流程
   *     fp_del              清空指纹库
+  *     fp_del:<id>         删除指定 ID 的指纹，如 fp_del:3
+  *     fp_list             列出已录指纹的 ID（逐行 fp=<id>，最后 fpend=<个数>）
   *     fp_num              查询已录指纹数量
   *     card_add            进入添加 RFID 卡流程
   *     card_del            清空已登记的卡
+  *     card_del:<idx>      删除指定索引的卡（索引与 card_list 一致），如 card_del:0
+  *     card_list           列出已登记的卡（逐行 card=<索引>,<UID>，最后 cardend=<数量>）
   *     card_num            查询已登记卡数量
   *     pwd:123456          用密码开锁
   *     pwd_set:654321      修改开锁密码
@@ -26,8 +30,12 @@
   *   ---- 设备 -> 小程序 ----
   *     state=lock | state=unlock
   *     ack=<命令名> | ack=pwd_ok | ack=pwd_fail | ack=pwd_set_ok | ack=pwd_set_bad
+  *     ack=fp_del_ok | ack=fp_del_fail | ack=fp_del_bad
+  *     ack=card_del_ok | ack=card_del_fail | ack=card_del_bad
+  *     fp=<id> ... fpend=<n>          （fp_list 的应答）
+  *     card=<索引>,<8 位十六进制 UID> ... cardend=<n>   （card_list 的应答）
   *     num=fp,<n> | num=card,<n>
-  *     pong | err=unknown | help=<命令列表>
+  *     pong | err=unknown | err=busy | help=<命令列表>
   ******************************************************************************
 **/
 

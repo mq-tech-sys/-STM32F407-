@@ -93,6 +93,40 @@ static void fire_servo(uint8_t cmd)
         xQueueSend(g_servo_queue, &cmd, 0);
 }
 
+/** 解析一个十进制整数；后面只允许空白或结束 */
+static uint8_t parse_uint(const char *src, unsigned *out)
+{
+    unsigned v = 0;
+    size_t n = 0;
+
+    while (src[n] >= '0' && src[n] <= '9' && n < 5)
+    {
+        v = v * 10 + (unsigned)(src[n] - '0');
+        n++;
+    }
+    if (n == 0)
+        return 0;
+    if (src[n] != '\0' && src[n] != ' ' && src[n] != '\r' && src[n] != '\n')
+        return 0;
+
+    *out = v;
+    return 1;
+}
+
+/** 取功能锁（不等待）。指纹/卡片的读写不能和录入、刷卡流程并发 */
+static uint8_t take_function_lock(void)
+{
+    if (g_mutex_function == NULL)
+        return 1;
+    return (xSemaphoreTake(g_mutex_function, 0) == pdTRUE) ? 1 : 0;
+}
+
+static void give_function_lock(void)
+{
+    if (g_mutex_function != NULL)
+        xSemaphoreGive(g_mutex_function);
+}
+
 /* --------------------------------------------------------------------------
  * 上报
  * -------------------------------------------------------------------------- */
@@ -126,7 +160,9 @@ void remote_cmd_on_online(void)
 /* --------------------------------------------------------------------------
  * 命令分发
  * -------------------------------------------------------------------------- */
-#define CMD_LIST "unlock,close,state,fp_add,fp_del,fp_num,card_add,card_del,card_num,pwd:,pwd_set:,ping"
+#define CMD_LIST "unlock,close,state,fp_add,fp_del,fp_del:<id>,fp_list,fp_num,"\
+                 "card_add,card_del,card_del:<idx>,card_list,card_num,"\
+                 "pwd:<6>,pwd_set:<6>,ping"
 
 void remote_cmd_handle_line(char *line)
 {
@@ -202,6 +238,111 @@ void remote_cmd_handle_line(char *line)
     {
         fire_event(EVENT_KEY2_DOUBLE);     /* 等同按键 2 双击：清空卡 */
         remote_cmd_send("ack=card_del");
+        return;
+    }
+
+    /* ---------------- 列出指纹（一行一个 ID，fpend=<个数> 收尾） ----------------
+     * AS608 没有"列出模板"的命令，只能从 0 开始逐个 LoadChar 探测：
+     * 确认码 0x00 = 该编号有指纹，其它 = 空位。
+     */
+    if (strcmp(line, "fp_list") == 0)
+    {
+        u16 i, n = 0, total = 0;
+        char buf[24];
+
+        if (!take_function_lock())
+        {
+            remote_cmd_send("err=busy");
+            return;
+        }
+
+        if (PS_ValidTempleteNum(&total) != 0)
+            total = 0;
+        if (total > fp_capacity())
+            total = fp_capacity();
+
+        /* 找齐 total 个就提前结束，避免每次都扫满整个容量 */
+        for (i = 0; i < fp_capacity() && n < total; i++)
+        {
+            if (fp_has_id(i))
+            {
+                sprintf(buf, "fp=%u", (unsigned)i);
+                remote_cmd_send(buf);
+                n++;
+            }
+        }
+
+        sprintf(buf, "fpend=%u", (unsigned)n);
+        remote_cmd_send(buf);
+        give_function_lock();
+        return;
+    }
+
+    /* ---------------- 删除指定 ID 的指纹 ---------------- */
+    rest = match(line, "fp_del:");
+    if (rest != NULL)
+    {
+        unsigned id;
+
+        if (!parse_uint(rest, &id))
+        {
+            remote_cmd_send("ack=fp_del_bad");
+            return;
+        }
+        if (!take_function_lock())
+        {
+            remote_cmd_send("err=busy");
+            return;
+        }
+
+        if (fp_delete_id((u16)id))
+        {
+            printf("[REMOTE] 已删除指纹 ID=%u\r\n", id);
+            remote_cmd_send("ack=fp_del_ok");
+        }
+        else
+        {
+            remote_cmd_send("ack=fp_del_fail");
+        }
+        give_function_lock();
+        return;
+    }
+
+    /* ---------------- 列出卡片（card=<索引>,<UID>，cardend=<数量> 收尾） ---------------- */
+    if (strcmp(line, "card_list") == 0)
+    {
+        uint8_t i;
+        char buf[32];
+
+        for (i = 0; i < g_card_count && i < 10; i++)
+        {
+            sprintf(buf, "card=%u,%02X%02X%02X%02X",
+                    (unsigned)i,
+                    g_card_list[i].uid[0], g_card_list[i].uid[1],
+                    g_card_list[i].uid[2], g_card_list[i].uid[3]);
+            remote_cmd_send(buf);
+        }
+
+        sprintf(buf, "cardend=%u", (unsigned)g_card_count);
+        remote_cmd_send(buf);
+        return;
+    }
+
+    /* ---------------- 删除指定索引的卡 ---------------- */
+    rest = match(line, "card_del:");
+    if (rest != NULL)
+    {
+        unsigned idx;
+
+        if (!parse_uint(rest, &idx) || idx > 255)
+        {
+            remote_cmd_send("ack=card_del_bad");
+            return;
+        }
+        if (delete_card_by_index((uint8_t)idx))
+            remote_cmd_send("ack=card_del_ok");
+        else
+            remote_cmd_send("ack=card_del_fail");
         return;
     }
 

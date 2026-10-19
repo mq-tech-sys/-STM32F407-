@@ -1,2 +1,14 @@
 /* 功能页：通用样式都在 app.wxss */
 .stats { margin-bottom: 26rpx; }
+
+/* 列表标题行：左边说明、右边"刷新列表" */
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 26rpx 0 6rpx;
+  padding-top: 18rpx;
+  border-top: 1px solid var(--line);
+}
+.list-t { font-size: 23rpx; color: var(--text-3); }
+.list-a { font-size: 24rpx; color: var(--primary); padding: 6rpx 0 6rpx 20rpx; }

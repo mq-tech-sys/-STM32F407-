@@ -42,6 +42,23 @@ u8 PS_DeletChar(u16 PageID,u16 N);//删除模板
 
 u8 PS_Empty(void);//清空指纹库 
 
+/* ---- 按 ID 管理指纹（远程/小程序删单个指纹用） ---- */
+
+/* 装载模板：返回 0 表示该 ID 上确实有指纹，其它值表示空位或失败 */
+u8 PS_LoadChar(u8 BufferID,u16 PageID);
+
+/* 该 ID 上是否有指纹，1 = 有 */
+u8 fp_has_id(u16 id);
+
+/* 删除指定 ID 的指纹，1 = 成功 */
+u8 fp_delete_id(u16 id);
+
+/* 找第一个空位，录入时用它分配 ID（1 = 找到） */
+u8 fp_first_free_id(u16 *id);
+
+/* 模块支持的模板编号上限（AS608 容量），未知时按 100 处理 */
+u16 fp_capacity(void);
+
 u8 PS_WriteReg(u8 RegNum,u8 DATA);//写系统寄存器 
  
 u8 PS_ReadSysPara(SysPara *p); //读系统基本参数 

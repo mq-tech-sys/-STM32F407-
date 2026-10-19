@@ -41,6 +41,21 @@
       </button>
     </view>
     <button class="btn danger sm" bindtap="onFpDel">删除全部指纹</button>
+
+    <view class="list-head">
+      <text class="list-t">已录指纹（编号 = 模块内的模板 ID）</text>
+      <view class="list-a" bindtap="onFpList">{{fpLoading ? '读取中…' : '刷新列表'}}</view>
+    </view>
+
+    <view wx:if="{{fpLoading && fpList.length === 0}}" class="empty">正在读取指纹列表…</view>
+    <view wx:if="{{!fpLoading && fpList.length === 0}}" class="empty">还没有录入指纹</view>
+    <view wx:for="{{fpList}}" wx:key="id" class="dev-item">
+      <view>
+        <view class="dev-name">指纹 #{{item.id}}</view>
+        <view class="dev-meta">模板编号 {{item.id}}</view>
+      </view>
+      <view class="dev-connect" style="color:var(--danger)" data-id="{{item.id}}" bindtap="onFpDeleteItem">删除</view>
+    </view>
   </view>
 
   <!-- RFID -->
@@ -61,6 +76,21 @@
       </button>
     </view>
     <button class="btn danger sm" bindtap="onCardDel">删除全部卡片</button>
+
+    <view class="list-head">
+      <text class="list-t">已登记卡（按登记顺序编号）</text>
+      <view class="list-a" bindtap="onCardList">{{cardLoading ? '读取中…' : '刷新列表'}}</view>
+    </view>
+
+    <view wx:if="{{cardLoading && cardList.length === 0}}" class="empty">正在读取卡列表…</view>
+    <view wx:if="{{!cardLoading && cardList.length === 0}}" class="empty">还没有登记卡片</view>
+    <view wx:for="{{cardList}}" wx:key="idx" class="dev-item">
+      <view>
+        <view class="dev-name">卡 #{{item.idx}}</view>
+        <view class="dev-meta">UID {{item.uid}}</view>
+      </view>
+      <view class="dev-connect" style="color:var(--danger)" data-idx="{{item.idx}}" bindtap="onCardDeleteItem">删除</view>
+    </view>
   </view>
 
   <!-- 密码 -->

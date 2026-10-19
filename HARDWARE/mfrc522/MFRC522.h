@@ -154,6 +154,7 @@ void MFRC522_Halt(void);
 extern int8_t find_card_by_uid(uint8_t *uid);
 extern void add_card(void);
 extern void delete_all_cards(void);
+extern uint8_t delete_card_by_index(uint8_t idx); // 删除指定索引（0 基）的卡，1=成功
 extern void check_card_unlock(void);
 //
 #endif

@@ -19,27 +19,101 @@ Page({
     newPassword: "",
     answers: [],
     fpCount: "-",
-    cardCount: "-"
+    cardCount: "-",
+    fpList: [],
+    cardList: [],
+    fpLoading: false,
+    cardLoading: false
   },
 
   onLoad() {
     const self = this;
     const c = ch();
 
+    // 列表是"逐行下发 + 结束行"的，先攒在页面实例上，收完再一次性 setData
+    this._fpBuf = [];
+    this._cardBuf = [];
+    this._loadedOnce = false;
+
     this.setData({ mode: c.mode, online: c.online });
 
     this._hStatus = function (s) {
       self.setData({ mode: s.mode, online: s.online });
+      // 连上后第一次自动把两份列表拉下来
+      if (s.online && !self._loadedOnce) {
+        self._loadedOnce = true;
+        self.refreshBoth();
+      }
     };
     this._hMsg = function (m) {
       const msg = m && m.msg;
       if (!msg) return;
 
+      /* ---- 数量 ---- */
       if (msg.indexOf("num=") === 0) {
         const p = msg.slice(4).split(",");
         if (p[0] === "fp") self.setData({ fpCount: p[1] });
         else self.setData({ cardCount: p[1] });
+        self.pushAnswer(msg);
+        return;
       }
+
+      /* ---- 指纹列表：一行一个 fp=<id>，fpend=<个数> 收尾 ---- */
+      if (msg.indexOf("fp=") === 0) {
+        self._fpBuf.push(msg.slice(3).trim());
+        return;
+      }
+      if (msg.indexOf("fpend=") === 0) {
+        self.finishFpList(parseInt(msg.slice(6), 10) || 0);
+        return;
+      }
+
+      /* ---- 卡列表：card=<索引>,<UID>，cardend=<个数> 收尾 ---- */
+      if (msg.indexOf("card=") === 0) {
+        const p = msg.slice(5).split(",");
+        if (p.length >= 2) {
+          self._cardBuf.push({
+            idx: parseInt(p[0], 10) || 0,
+            uid: (p[1] || "").toUpperCase()
+          });
+        }
+        return;
+      }
+      if (msg.indexOf("cardend=") === 0) {
+        self.finishCardList(parseInt(msg.slice(8), 10) || 0);
+        return;
+      }
+
+      /* ---- 单项删除结果：成功后自动刷新对应列表 ---- */
+      if (msg === "ack=fp_del_ok" || msg === "ack=card_del_ok") {
+        self.pushAnswer(msg);
+        setTimeout(function () {
+          if (msg === "ack=fp_del_ok") self.onFpList(true);
+          else self.onCardList(true);
+        }, 400);
+        return;
+      }
+      /* 设备正忙（正在录入/刷卡）：立刻停掉 loading，别让人对着转圈等超时 */
+      if (msg === "err=busy") {
+        self.setData({ fpLoading: false, cardLoading: false });
+        self.pushAnswer("设备正忙（正在录入或刷卡），稍后再试");
+        return;
+      }
+      if (msg === "ack=fp_del_fail" || msg === "ack=fp_del_bad") {
+        self.setData({ fpLoading: false });
+      }
+      if (msg === "ack=card_del_fail" || msg === "ack=card_del_bad") {
+        self.setData({ cardLoading: false });
+      }
+      if (msg === "ack=fp_del" || msg === "ack=card_del") {
+        self.pushAnswer(msg);
+        setTimeout(function () {
+          if (msg === "ack=fp_del") self.onFpList(true);
+          else self.onCardList(true);
+        }, 800);
+        return;
+      }
+
       self.pushAnswer(msg);
     };
     this._hErr = function (text) {
@@ -54,6 +128,10 @@ Page({
   onShow() {
     const c = ch();
     this.setData({ online: c.isOnline(), theme: theme.sync() });
+    if (c.isOnline() && !this._loadedOnce) {
+      this._loadedOnce = true;
+      this.refreshBoth();
+    }
   },
 
   onToggleTheme() {
@@ -117,6 +195,56 @@ Page({
     this.cmd("fp_num", "fp_num（查询指纹数量）");
   },
 
+  /** quiet=true 时是程序内部刷新，不记一条"（我）"日志 */
+  onFpList(quiet) {
+    const self = this;
+    if (!this.cmd("fp_list", "fp_list（读取指纹列表）")) return;
+
+    this._fpBuf = [];
+    this.setData({ fpList: [], fpLoading: true });
+
+    clearTimeout(this._fpTimer);
+    this._fpTimer = setTimeout(function () {
+      if (!self.data.fpLoading) return;
+      self.setData({ fpLoading: false });
+      self.pushAnswer("没收到指纹列表：设备可能正忙（正在录入/刷卡）或不在线");
+    }, 6000);
+  },
+
+  finishFpList(n) {
+    clearTimeout(this._fpTimer);
+    const list = (this._fpBuf || []).map(function (id) {
+      return { id: id };
+    });
+    this.setData({ fpList: list, fpLoading: false, fpCount: String(n) });
+    this.pushAnswer(
+      "指纹列表：" +
+        (list.length
+          ? list
+              .map(function (x) {
+                return "#" + x.id;
+              })
+              .join(" ")
+          : "（空）")
+    );
+  },
+
+  onFpDeleteItem(e) {
+    const self = this;
+    const id = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: "删除指纹 #" + id,
+      content: "删除后无法恢复，需要重新录入同一根手指。",
+      confirmText: "删除",
+      confirmColor: "#dc2626",
+      success: function (res) {
+        if (!res.confirm) return;
+        self.setData({ fpLoading: true });
+        self.cmd("fp_del:" + id, "fp_del:" + id + "（删除指纹 #" + id + "）");
+      }
+    });
+  },
+
   /* ------------------------------------------------------------ RFID 卡 */
 
   onCardAdd() {
@@ -130,6 +258,62 @@ Page({
 
   onCardNum() {
     this.cmd("card_num", "card_num（查询卡片数量）");
+  },
+
+  onCardList(quiet) {
+    const self = this;
+    if (!this.cmd("card_list", "card_list（读取卡列表）")) return;
+
+    this._cardBuf = [];
+    this.setData({ cardList: [], cardLoading: true });
+
+    clearTimeout(this._cardTimer);
+    this._cardTimer = setTimeout(function () {
+      if (!self.data.cardLoading) return;
+      self.setData({ cardLoading: false });
+      self.pushAnswer("没收到卡列表：设备可能正忙（正在加卡/刷卡）或不在线");
+    }, 4000);
+  },
+
+  finishCardList(n) {
+    clearTimeout(this._cardTimer);
+    const list = (this._cardBuf || []).slice().sort(function (a, b) {
+      return a.idx - b.idx;
+    });
+    this.setData({ cardList: list, cardLoading: false, cardCount: String(n) });
+    this.pushAnswer(
+      "卡列表：" +
+        (list.length
+          ? list
+              .map(function (x) {
+                return "#" + x.idx + " " + x.uid;
+              })
+              .join(" / ")
+          : "（空）")
+    );
+  },
+
+  onCardDeleteItem(e) {
+    const self = this;
+    const idx = e.currentTarget.dataset.idx;
+    wx.showModal({
+      title: "删除卡 #" + idx,
+      content: "删除后这张卡将无法再刷卡开锁。",
+      confirmText: "删除",
+      confirmColor: "#dc2626",
+      success: function (res) {
+        if (!res.confirm) return;
+        self.setData({ cardLoading: true });
+        self.cmd("card_del:" + idx, "card_del:" + idx + "（删除卡 #" + idx + "）");
+      }
+    });
+  },
+
+  /** 连上后把两份列表一起拉一遍 */
+  refreshBoth() {
+    if (!ch().isOnline()) return;
+    this.onFpList(true);
+    this.onCardList(true);
   },
 
   /* ------------------------------------------------------------ 密码 */
