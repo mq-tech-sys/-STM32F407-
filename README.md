@@ -166,11 +166,14 @@ tests/         PC 端自检（不需要 Keil）
 
 ### PC 端自检（不需要 Keil）
 
-**Windows**：直接双击 `tests\run_tests.bat`，或在项目根目录执行
+**Windows**：直接**双击** `tests\run_tests.bat`。
 
-```bat
-tests\run_tests.bat
 ```
+tests\run_tests.bat              :: 跑完停在「按任意键关闭窗口」，方便看结果
+tests\run_tests.bat /nopause     :: 不停，CI / 脚本里用这个
+```
+
+> 双击运行时 cmd 会在脚本结束的瞬间关掉窗口（不是报错，是 cmd 的默认行为）。脚本已经内置 `pause` 停在最后一行；如果连窗口都看不到就被杀掉了，说明是**杀毒软件**拦了 bat，换个目录或加白名单再试。
 
 脚本会自己找 `gcc`（PATH 里没有时会试 `D:\mingw64\bin`、`C:\msys64\mingw64\bin` 等常见位置）和 `node`。
 需要 **MinGW-w64 gcc** + **Node.js**（第 2 步的小程序测试用）；都没有也能跑，但对应步骤会跳过/报错。

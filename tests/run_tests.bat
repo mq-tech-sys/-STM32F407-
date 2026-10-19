@@ -1,10 +1,12 @@
 @echo off
 chcp 936 >nul
+title smart-lock 网络层自检
 setlocal
 rem ============================================================================
 rem  smart-lock 网络层自检（PC 端，不需要 Keil / ARM 工具链）
 rem
-rem  用法： 双击本文件，或在项目根目录执行  tests\run_tests.bat
+rem  用法： 双击本文件，或执行  tests\run_tests.bat
+rem         脚本/CI 里不想停住时加参数：  tests\run_tests.bat /nopause
 rem ============================================================================
 
 cd /d "%~dp0.."
@@ -68,12 +70,22 @@ echo ----------------------------------------------
 echo  全部通过（3/3）。
 echo  注意：第 3 步只做语法检查，正式固件请到 Keil MDK 里 Rebuild 一次。
 echo ----------------------------------------------
-goto :eof
+set "RC=0"
+goto :finish
 
 :fail
 echo.
 echo ----------------------------------------------
 echo  自检失败，见上方报错。
 echo ----------------------------------------------
-endlocal
-exit /b 1
+set "RC=1"
+
+:finish
+echo.
+rem 双击运行时 cmd 会在脚本结束的瞬间关窗口，这里停住，否则只能看到一闪
+if /i "%~1"=="/nopause" goto :done
+echo 按任意键关闭窗口 ...
+pause >nul
+
+:done
+endlocal & exit /b %RC%
