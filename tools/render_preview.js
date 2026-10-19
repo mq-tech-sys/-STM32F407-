@@ -37,6 +37,14 @@ const ONLY_THEME = arg("theme", "");
 const WANT_PNG = flag("png");
 /** 固定截图高度（px）。设了就把长页截成统一尺寸，用于 README 并排展示 */
 const FIXED_H = parseInt(arg("height", "0"), 10) || 0;
+/** 从第几像素开始截（配合 --height 取页面下半段） */
+const SLICE_Y = parseInt(arg("slice", "0"), 10) || 0;
+/** 按元素定位：找到含该文字的卡片，从它上面一点开始截 */
+const ANCHOR = arg("anchor", "");
+/** 页面状态变体，目前只有 index 的 ble */
+const STATE = arg("state", "");
+/** 输出文件名后缀，用来区分「整页」与「下半段」这类派生截图 */
+const TAG = arg("tag", "");
 
 /* ------------------------------------------------------------------ 假数据 */
 
@@ -106,6 +114,20 @@ const PREVIEW_DATA = {
 
 // 输出文件名：控制页的目录叫 index，截图叫 control 更好认
 const OUT_NAME = { index: "control" };
+
+// 页面状态变体：只改数据，不改模板
+const STATE_OVERRIDE = {
+  ble: {
+    mode: "ble",
+    connected: false,
+    online: false,
+    lockState: "",
+    logs: [],
+    devices: [],
+    scanning: false,
+    bleName: ""
+  }
+};
 
 const TABS = [
   { key: "index", label: "控制", icon: "tab-control" },
@@ -318,6 +340,7 @@ function buildHtml(page, theme) {
   const wxml = fs.readFileSync(path.join(MP, "pages", page, page + ".wxml"), "utf8");
   const tree = parseWxml(wxml);
   const data = Object.assign({}, PREVIEW_DATA[page], { theme });
+  if (page === "index" && STATE_OVERRIDE[STATE]) Object.assign(data, STATE_OVERRIDE[STATE]);
   const body = renderChildren(tree.children, data);
 
   return `<!DOCTYPE html>
@@ -410,19 +433,63 @@ async function cdpShot(url, pngPath, width = 375, scale = 1) {
   });
   const natural = Math.max(200, ev.result.value || 812);
 
-  /* 固定高度截图：内容比目标高时，底部加一层渐隐，避免硬切 */
+  let y0 = SLICE_Y;
+  if (ANCHOR) {
+    const q = `(function () {
+      var t = ${JSON.stringify(ANCHOR)};
+      var n = document.querySelectorAll('*');
+      for (var i = 0; i < n.length; i++) {
+        var e = n[i];
+        if (e.children.length === 0 && e.textContent.trim().indexOf(t) === 0) {
+          var c = e;
+          while (c && !(c.classList && c.classList.contains('card'))) c = c.parentElement;
+          var box = (c || e).getBoundingClientRect();
+          return Math.round(box.top + window.scrollY);
+        }
+      }
+      return -1;
+    })()`;
+    const a = await send("Runtime.evaluate", { expression: q, returnByValue: true });
+    if (a.result.value >= 0) y0 = Math.max(0, a.result.value - 20);
+  }
+
+  /* 固定高度截图：上下被裁掉的地方各加一层渐隐，避免硬切 */
   if (FIXED_H) {
+    const top = y0 > 0 ? y0 : -1;
+    const stick = y0 > 0 ? 1 : 0;
     const fade = `(function () {
       var p = document.querySelector('.phone');
-      if (p && p.getBoundingClientRect().height > ${FIXED_H}) {
-        var d = document.createElement('div');
-        d.style.cssText = 'position:absolute;left:0;right:0;top:${FIXED_H - 76}px;height:76px;' +
-          'background:linear-gradient(to bottom,transparent,var(--bg,#f4f6fb) 86%);' +
-          'pointer-events:none;z-index:99';
-        p.appendChild(d);
-        return 1;
+      if (!p) return 0;
+      var fullH = p.getBoundingClientRect().height;
+      var tbH = 0;
+      var tb = document.querySelector('.tabbar');
+      /* 从中间开始截时，把 tabBar 钉在画面底部 —— 真机滚动时它就是这样 */
+      if (${stick} && tb) {
+        tbH = Math.round(tb.getBoundingClientRect().height);
+        tb.style.position = 'absolute';
+        tb.style.left = '0';
+        tb.style.right = '0';
+        tb.style.top = (${y0} + ${FIXED_H} - tbH) + 'px';
+        tb.style.zIndex = '98';
+        tb.style.background = 'var(--card)';
+        /* tabBar 脱离文档流会把 .phone 缩短，不补回来它自己就被 overflow 裁掉 */
+        p.style.height = Math.max(fullH, ${y0} + ${FIXED_H}) + 'px';
       }
-      return 0;
+      var bottomTop = tbH ? ${y0} + ${FIXED_H} - tbH - 56 : ${y0 + FIXED_H - 76};
+      var bottomH = tbH ? 56 : 76;
+      var tops = [${top}, bottomTop];
+      var hs = [56, bottomH];
+      for (var i = 0; i < tops.length; i++) {
+        if (tops[i] < 0) continue;
+        var d = document.createElement('div');
+        var g = i === 0
+          ? 'linear-gradient(to bottom,var(--bg,#f4f6fb),transparent)'
+          : 'linear-gradient(to bottom,transparent,var(--bg,#f4f6fb) 86%)';
+        d.style.cssText = 'position:absolute;left:0;right:0;top:' + tops[i] + 'px;height:' + hs[i] + 'px;' +
+          'background:' + g + ';pointer-events:none;z-index:99';
+        p.appendChild(d);
+      }
+      return 1;
     })()`;
     await send("Runtime.evaluate", { expression: fade, returnByValue: true });
   }
@@ -431,7 +498,7 @@ async function cdpShot(url, pngPath, width = 375, scale = 1) {
   const shot = await send("Page.captureScreenshot", {
     format: "png",
     captureBeyondViewport: true,
-    clip: { x: 0, y: 0, width, height, scale }
+    clip: { x: 0, y: y0, width, height, scale }
   });
 
   fs.writeFileSync(pngPath, Buffer.from(shot.data, "base64"));
@@ -450,14 +517,15 @@ async function cdpShot(url, pngPath, width = 375, scale = 1) {
 
   for (const page of pages) {
     for (const theme of themes) {
-      const base = path.join(OUT_DIR, `${OUT_NAME[page] || page}-${theme}`);
+      const name = `${OUT_NAME[page] || page}${STATE ? "-" + STATE : ""}${TAG ? "-" + TAG : ""}`;
+      const base = path.join(OUT_DIR, `${name}-${theme}`);
       const htmlPath = base + ".html";
       fs.writeFileSync(htmlPath, buildHtml(page, theme), "utf8");
 
       let info = "";
       if (WANT_PNG && EDGE) {
         const r = await cdpShot("file:///" + htmlPath.replace(/\\/g, "/"), base + ".png");
-        info = ` -> ${OUT_NAME[page] || page}-${theme}.png (${r.width}x${r.height})`;
+        info = ` -> ${name}-${theme}.png (${r.width}x${r.height})`;
         fs.unlinkSync(htmlPath);
       }
       console.log(`rendered ${page}/${theme}${info}`);

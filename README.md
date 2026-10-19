@@ -368,13 +368,21 @@ tests\run_tests.bat        :: 第 6 步就是它
 - 主题存在本地，下次打开保持；切换时**导航栏、页面底色、tabBar 一起变**
 - 要换配色只改那两个变量块，页面样式不用碰
 
-| 控制 · 浅色 | 控制 · 深色 | 功能 · 浅色 | 功能 · 深色 |
-|:--:|:--:|:--:|:--:|
-| <img src="mini-program/screenshots/control-light.png" width="180"> | <img src="mini-program/screenshots/control-dark.png" width="180"> | <img src="mini-program/screenshots/features-light.png" width="180"> | <img src="mini-program/screenshots/features-dark.png" width="180"> |
+**浅色 · 首屏**
 
-| 设置 · 浅色 | 设置 · 深色 |
-|:--:|:--:|
-| <img src="mini-program/screenshots/settings-light.png" width="180"> | <img src="mini-program/screenshots/settings-dark.png" width="180"> |
+| 控制 | 功能 | 设置 |
+|:--:|:--:|:--:|
+| <img src="mini-program/screenshots/control-light.png" width="200"> | <img src="mini-program/screenshots/features-light.png" width="200"> | <img src="mini-program/screenshots/settings-light.png" width="200"> |
+
+**浅色 · 下半部分**（控制页切到蓝牙直连、功能页的密码与调试、设置页的模块信息与诊断）
+
+| 控制 · 蓝牙直连 | 功能 · 密码 / 调试 | 设置 · 模块信息 / 诊断 |
+|:--:|:--:|:--:|
+| <img src="mini-program/screenshots/control-ble-light.png" width="200"> | <img src="mini-program/screenshots/features-lower-light.png" width="200"> | <img src="mini-program/screenshots/settings-lower-light.png" width="200"> |
+
+**深色主题**（配色由同一套 CSS 变量驱动，只举一例）
+
+<p align="center"><img src="mini-program/screenshots/control-dark.png" width="200"></p>
 
 图标分两套：
 

@@ -33,6 +33,8 @@ screenshots/                   各页面截图（下面）
 
 ## 截图
 
+**首屏**（浅 / 深各一份）
+
 | 控制 · 浅色 | 控制 · 深色 | 功能 · 浅色 | 功能 · 深色 |
 |:--:|:--:|:--:|:--:|
 | ![](screenshots/control-light.png) | ![](screenshots/control-dark.png) | ![](screenshots/features-light.png) | ![](screenshots/features-dark.png) |
@@ -41,16 +43,36 @@ screenshots/                   各页面截图（下面）
 |:--:|:--:|
 | ![](screenshots/settings-light.png) | ![](screenshots/settings-dark.png) |
 
+**下半部分**（只有浅色，展示蓝牙直连 / 密码调试 / 模块信息）
+
+| 控制 · 蓝牙直连 | 功能 · 密码 / 调试 | 设置 · 模块信息 / 诊断 |
+|:--:|:--:|:--:|
+| ![](screenshots/control-ble-light.png) | ![](screenshots/features-lower-light.png) | ![](screenshots/settings-lower-light.png) |
+
 这些图是 `../tools/render_preview.js` 读真实的 `app.wxss` + 页面 `wxml/wxss`、
-按 375 宽手机屏渲染后整页截下来的，改了界面重跑一次即可：
+按 375 宽手机屏渲染后截下来的，全部 375×801。改了界面重跑：
 
 ```bash
-node tools/render_preview.js --png --height 801      # 在仓库根目录执行，README 用的是这组
-node tools/render_preview.js --png --page settings --theme dark   # 只更新一页
+# 六个首屏（浅 + 深），在仓库根目录执行
+node tools/render_preview.js --png --height 801
+
+# 三张下半部分
+node tools/render_preview.js --png --theme light --page index --state ble --height 801 --slice 115
+node tools/render_preview.js --png --theme light --page features --tag lower --height 801 --slice 813
+node tools/render_preview.js --png --theme light --page settings --tag lower --height 801 --anchor 模块信息
 ```
 
-`--height 801` 会让三个页面截成统一的 375×801，README 里并排才不会一高一矮；
-内容超出时底部自动渐隐。去掉这个参数截的是整页长图。
+参数含义：
+
+| 参数 | 作用 |
+| --- | --- |
+| `--height 801` | 统一截成 375×801，并排不会一高一矮；超出部分底部渐隐 |
+| `--slice N` | 从第 N 像素开始截（配合 `--height` 取下半段），上下都渐隐 |
+| `--anchor 文字` | 自动定位到含该文字的卡片，省得手算坐标 |
+| `--state ble` | 控制页换成「蓝牙直连、没扫到设备」的状态（只改数据不改模板） |
+| `--tag lower` | 输出文件名加后缀，避免覆盖首屏那批 |
+
+去掉 `--height` 截的是整页长图（控制页 801 / 功能页 1614 / 设置页 1825）。
 
 ## 自测
 
