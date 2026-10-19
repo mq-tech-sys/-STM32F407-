@@ -4,6 +4,18 @@
 > 基于 **FreeRTOS** 多任务架构，标准库（SPL）开发，Keil MDK5 一键编译烧录。
 > 配套**微信小程序**，可以远程开关门、远程录入指纹、远程添加/删除卡片。
 
+<p align="center">
+  <img src="mini-program/screenshots/control-light.png" width="215">
+  &nbsp;
+  <img src="mini-program/screenshots/features-light.png" width="215">
+  &nbsp;
+  <img src="mini-program/screenshots/settings-light.png" width="215">
+</p>
+
+<p align="center"><sub>小程序三页 · 控制 / 功能 / 设置（浅色主题；深色主题与全部截图见「九、小程序」）</sub></p>
+
+> 板子不在手边也能把小程序测通：仓库里带了一台 [**Windows 虚拟门锁**](sim/)，说的和固件是同一套协议，见下面 7.2 节。
+
 ---
 
 ## 一、功能一览
@@ -157,9 +169,10 @@ SYSTEM/        sys(GPIO 位带) / delay / usart(含 USART3 接收环形缓冲) /
 USER/          main.c（任务定义与调度）+ include.h + 中断服务 + Keil 工程
 img/           OLED 锁 / 解锁图标点阵
 font/          16×16 中文字库（116 字形）与索引表
-mini-program/  微信小程序（控制 / 功能 / 设置 三个页面，明暗双主题；图标在 images/）
+mini-program/  微信小程序（控制 / 功能 / 设置 三个页面，明暗双主题；图标在 images/，截图在 screenshots/）
+sim/           ★ Windows 虚拟门锁：没有板子也能联调小程序（纯标准库 Python）
 tests/         PC 端自检（不需要 Keil）
-tools/         辅助脚本（gen_tabbar_icons.py 生成小程序 tabBar 图标）
+tools/         辅助脚本（gen_tabbar_icons.py 生成 tabBar 图标、render_preview.js 渲染界面截图）
 ```
 
 ## 七、编译与烧录
@@ -173,7 +186,7 @@ tools/         辅助脚本（gen_tabbar_icons.py 生成小程序 tabBar 图标�
 
 > **编码注意**：源码中大量中文注释为 **GB2312 编码**（Keil 默认 ANSI）。用 VS Code 等编辑器查看时请把文件编码切到 `GB2312`，否则中文会显示为乱码。修改时也请保持原编码；另外 `oled_show_string()` 依赖 GB2312 双字节切分查中文字库，**不能**把源码另存为 UTF-8。
 
-### PC 端自检（不需要 Keil）
+### 7.1 PC 端自检（不需要 Keil）
 
 **Windows**：直接**双击** `tests\run_tests.bat`。
 
@@ -197,7 +210,7 @@ sh tests/run_tests.sh
 
 1. 固件 MQTT 报文层单测（`tests/test_mqtt.c`，104 项断言：定长/变长剩余长度、拆包、粘包、非法报文重同步、缓冲越界防护……）
 2. 小程序单测：`test_mqtt_js.js` **逐字节比对**两份实现生成的 CONNECT / SUBSCRIBE / PUBLISH 报文；`test_ble.js` 用假 `wx` 验证蓝牙扫描（设备合并、排序、过滤标记、兜底轮询、自检）；`test_features.js` 用假 `Page/getApp/wx` 跑功能页逻辑（列表拼装、单项删除命令、删除后自动刷新、`err=busy`）
-3. 小程序界面静态检查（`tests/test_ui.js`，145 项：wxml 标签配对、`bindtap` 的方法是否存在、用到的 `i-*` 图标类是否定义、深浅两套主题的 CSS 变量是否齐全、`app.json` 里页面与 tabBar 图标文件是否都在）
+3. 小程序界面静态检查（`tests/test_ui.js`，159 项：wxml 标签配对、`bindtap` 的方法是否存在、用到的 `i-*` 图标类是否定义、深浅两套主题的 CSS 变量是否齐全、`app.json` 里页面与 tabBar 图标文件是否都在）
 4. 固件新增模块语法自检（`gcc -fsyntax-only` + `tests/stub/` 里的假头文件，抓拼写和原型不匹配）
 
 全绿时最后会打印：
@@ -210,6 +223,44 @@ sh tests/run_tests.sh
 
 有失败会停在对应步骤并打印 `自检失败`，退出码为 `1`。
 > 第 3 步只是语法检查，**不能替代在 Keil 里真正编译一次**。
+
+### 7.2 没有板子？跑一台虚拟门锁
+
+板子不在手边时，用 `sim/` 里这台 **Windows 虚拟门锁**代替真机。它跑在 PC 上，说的是和
+`HARDWARE/net/remote_cmd.c` **一模一样**的 ASCII 行协议（`unlock` / `fp_list` / `fp_del:2` …），
+所以小程序不用改一行代码就能连它、开关它、删它的指纹和卡。
+
+```
+小程序 ──MQTT/WebSocket──► 巴法云 ──MQTT/TCP──► sim/（虚拟门锁）
+   └───────────── 或者 ─────────────► ws://127.0.0.1:9001（本地模式，完全不出网）
+```
+
+双击 **`sim\run.bat`**，控制台自动开在 <http://127.0.0.1:8848>：
+
+<img src="sim/console.png" width="720">
+
+左边是虚拟门锁（开锁 / 上锁），中间是它的指纹库和卡库，下面**报文区**把每一条收发都记下来
+（蓝 = 收到、绿 = 发出、灰 = 内部事件），底部还能直接手打一条命令。页面上点按钮和从小程序发命令
+走的是**同一个** `handle(line)` 入口，所以"控制台能跑通"基本等价于"小程序能跑通"。
+
+| 文件 | 作用 |
+| --- | --- |
+| `sim\run.bat` | 云端 + 本地两条链路一起开（默认） |
+| `sim\run-local.bat` | 只跑内置 broker，一个字节都不出网，适合改完代码立刻测 |
+| `sim\run-mine.bat` | 交互输入你自己的主题名和私钥 |
+| `sim\probe.bat` | 链路诊断：设备侧 TCP / 小程序侧 WSS / 双向路由，分三段报结果 |
+
+小程序那边怎么填、每一步该看到什么，见 [`sim/TEST-STEPS.md`](sim/TEST-STEPS.md)；
+模拟器自己的说明和协议对照见 [`sim/README.md`](sim/README.md)。自测：
+
+```bat
+cd sim
+python tests\test_protocol.py     :: 32 条用例，全部对齐 remote_cmd.c
+```
+
+> 模拟器和真机的差别只有三处：录指纹/加卡是 2 秒后自动塞一条（真机要按手指、贴卡）、
+> 不会掉电重启、容量按 100 枚指纹 / 10 张卡。都写在 `sim/README.md` 里。
+
 
 ## 八、配置
 
@@ -261,6 +312,18 @@ sh tests/run_tests.sh
 - **切换方式**：控制页 / 功能页右上角的月亮·太阳按钮，或设置页「外观」里选浅色 / 深色
 - 主题存在本地，下次打开保持；切换时**导航栏、页面底色、tabBar 一起变**
 - 要换配色只改那两个变量块，页面样式不用碰
+
+| 控制 · 浅色 | 控制 · 深色 | 功能 · 浅色 | 功能 · 深色 |
+|:--:|:--:|:--:|:--:|
+| <img src="mini-program/screenshots/control-light.png" width="180"> | <img src="mini-program/screenshots/control-dark.png" width="180"> | <img src="mini-program/screenshots/features-light.png" width="180"> | <img src="mini-program/screenshots/features-dark.png" width="180"> |
+
+| 设置 · 浅色 | 设置 · 深色 |
+|:--:|:--:|
+| <img src="mini-program/screenshots/settings-light.png" width="180"> | <img src="mini-program/screenshots/settings-dark.png" width="180"> |
+
+> 这几张图不是手 P 的：`tools/render_preview.js` 直接读 `app.wxss` 和页面的 `wxml/wxss`，
+> 按 375 宽手机屏渲染、再整页截图，等于把开发者工具的渲染结果直接导出来。
+> 改了界面重跑 `node tools/render_preview.js --png` 就会覆盖 `mini-program/screenshots/` 里的图。
 
 图标分两套：
 

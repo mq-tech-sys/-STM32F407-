@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+sim_state.json
+_run_state.json
+_shot.png
+CONFIG-MINE.md
+_probe_*.py

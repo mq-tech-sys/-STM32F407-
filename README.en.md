@@ -115,6 +115,22 @@ sh tests/run_tests.sh    #  or tests\run_tests.bat on Windows
 
 Three stages: the firmware MQTT codec unit test (104 assertions), the mini program MQTT client unit test (byte-for-byte comparison of the packets both implementations generate), and a `gcc -fsyntax-only` check of the new firmware modules against stub headers. The third stage is a syntax check only — it does not replace a real Keil build.
 
+### No board at hand? Run the virtual lock
+
+`sim/` is a Windows virtual door lock speaking the exact same ASCII line protocol as `remote_cmd.c`
+(`unlock`, `fp_list`, `fp_del:2`, …), so the mini program can be tested end-to-end without hardware.
+
+```bat
+sim\run.bat          ::  console at http://127.0.0.1:8848
+sim\run-local.bat    ::  built-in broker only, nothing leaves the machine
+sim\probe.bat        ::  link diagnostics: device TCP / mini program WSS / round trip
+```
+
+<img src="sim/console.png" width="720">
+
+See [`sim/README.md`](sim/README.md) for the protocol table and [`sim/TEST-STEPS.md`](sim/TEST-STEPS.md) for a click-by-click walkthrough.
+
+
 ## Configuration
 
 - `HARDWARE/net/bemfa_mqtt.h` — WiFi SSID / password, Bemfa private key (`BAFA_UID`), topic, MQTT host/port/keepalive
@@ -122,6 +138,14 @@ Three stages: the firmware MQTT codec unit test (104 assertions), the mini progr
 - `USER/include.h` — `USART3_WIFI_USE` / `USART3_BLE_USE` (mutually exclusive: USART3 has only one set of pins)
 
 ## Mini program
+
+<p align="center">
+  <img src="mini-program/screenshots/control-light.png" width="200">
+  &nbsp;
+  <img src="mini-program/screenshots/features-light.png" width="200">
+  &nbsp;
+  <img src="mini-program/screenshots/settings-light.png" width="200">
+</p>
 
 Open the `mini-program/` folder in WeChat DevTools. During development, tick *Details → Local settings → skip domain validation*; for release, add `wss://bemfa.com` to the socket domain whitelist in the mini program console. Two modes can be switched on the home page:
 
