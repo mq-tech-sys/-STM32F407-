@@ -166,8 +166,19 @@ tests/         PC 端自检（不需要 Keil）
 
 ### PC 端自检（不需要 Keil）
 
+**Windows**：直接双击 `tests\run_tests.bat`，或在项目根目录执行
+
+```bat
+tests\run_tests.bat
+```
+
+脚本会自己找 `gcc`（PATH 里没有时会试 `D:\mingw64\bin`、`C:\msys64\mingw64\bin` 等常见位置）和 `node`。
+需要 **MinGW-w64 gcc** + **Node.js**（第 2 步的小程序测试用）；都没有也能跑，但对应步骤会跳过/报错。
+
+**Linux / macOS / Git Bash**：
+
 ```bash
-sh tests/run_tests.sh        # 或 Windows 下 tests\run_tests.bat
+sh tests/run_tests.sh
 ```
 
 三步：
@@ -176,6 +187,15 @@ sh tests/run_tests.sh        # 或 Windows 下 tests\run_tests.bat
 2. 小程序 MQTT 客户端单测（`tests/test_mqtt_js.js`，会**逐字节比对**两份实现生成的 CONNECT / SUBSCRIBE / PUBLISH 报文是否完全一致）
 3. 固件新增模块语法自检（`gcc -fsyntax-only` + `tests/stub/` 里的假头文件，抓拼写和原型不匹配）
 
+全绿时最后会打印：
+
+```
+----------------------------------------------
+ 全部通过（3/3）。
+----------------------------------------------
+```
+
+有失败会停在对应步骤并打印 `自检失败`，退出码为 `1`。
 > 第 3 步只是语法检查，**不能替代在 Keil 里真正编译一次**。
 
 ## 八、配置

@@ -19,6 +19,10 @@ OBJ/*
 *.uvguix.*
 JLinkLog.txt
 JLinkSettings.ini
+USER/DebugConfig/
+
+# ---------- 微信开发者工具（每人本地不同） ----------
+mini-program/project.private.config.json
 
 # ---------- 编辑器 / 系统 ----------
 .vscode/

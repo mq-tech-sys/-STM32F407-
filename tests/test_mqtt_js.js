@@ -188,7 +188,7 @@ function testUtf8Roundtrip() {
 
 /* ================================================================== main */
 
-console.log("小程序 MQTT 客户端自测");
+console.log("mini-program MQTT client self-test");
 testConnectFrame();
 testSubscribeFrame();
 testPublishFrame();

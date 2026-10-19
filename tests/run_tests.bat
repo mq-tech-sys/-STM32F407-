@@ -1,52 +1,79 @@
 @echo off
-rem ============================================================================
-rem  smart-lock ç½‘ç»œå±‚è‡ªæ£€ï¼ˆPC ç«¯ï¼Œä¸éœ€è¦ Keil / ARM å·¥å…·é“¾ï¼‰
-rem
-rem   1) MQTT æŠ¥æ–‡ç¼–è§£ç å•å…ƒæµ‹è¯•  -- çœŸçš„æ‰§è¡Œï¼Œ104 é¡¹æ–­è¨€
-rem   2) æ–°å¢å›ºä»¶æ¨¡å—è¯­æ³•è‡ªæ£€     -- -fsyntax-onlyï¼ŒæŠ“æ‹¼å†™/åŸå‹ä¸åŒ¹é…
-rem
-rem  ç”¨æ³•ï¼š tests\run_tests.bat
-rem ============================================================================
+chcp 936 >nul
 setlocal
-cd /d "%~dp0.."
+rem ============================================================================
+rem  smart-lock ÍøÂç²ã×Ô¼ì£¨PC ¶Ë£¬²»ĞèÒª Keil / ARM ¹¤¾ßÁ´£©
+rem
+rem  ÓÃ·¨£º Ë«»÷±¾ÎÄ¼ş£¬»òÔÚÏîÄ¿¸ùÄ¿Â¼Ö´ĞĞ  tests\run_tests.bat
+rem ============================================================================
 
+cd /d "%~dp0.."
+echo ÏîÄ¿Ä¿Â¼: %CD%
+echo.
+
+rem ---------- ¶¨Î» gcc ----------
+set "CC="
 where gcc >nul 2>nul
-if errorlevel 1 (
-    echo [é”™è¯¯] æ‰¾ä¸åˆ° gccã€‚è¯·æŠŠ MinGW / TDM-GCC çš„ bin ç›®å½•åŠ è¿› PATHï¼Œ
-    echo        æˆ–ç”¨ï¼š set CC=D:\mingw64\bin\gcc.exe ä¹‹åé‡è·‘ã€‚
-    exit /b 1
+if not errorlevel 1 set "CC=gcc"
+if not defined CC if exist "D:/mingw64/bin/gcc.exe" set "CC=D:/mingw64/bin/gcc.exe"
+if not defined CC if exist "C:/mingw64/bin/gcc.exe" set "CC=C:/mingw64/bin/gcc.exe"
+if not defined CC if exist "C:/TDM-GCC-64/bin/gcc.exe" set "CC=C:/TDM-GCC-64/bin/gcc.exe"
+if not defined CC if exist "C:/msys64/mingw64/bin/gcc.exe" set "CC=C:/msys64/mingw64/bin/gcc.exe"
+if not defined CC (
+    echo [´íÎó] ÕÒ²»µ½ gcc ±àÒëÆ÷¡£
+    echo        Çë°²×° MinGW-w64£¬»ò°Ñ gcc.exe ËùÔÚÄ¿Â¼¼ÓÈë PATH ºóÖØÊÔ¡£
+    goto :fail
 )
 
+rem ---------- ¶¨Î» node ----------
+set "NODE="
+where node >nul 2>nul
+if not errorlevel 1 set "NODE=node"
+if not defined NODE if exist "C:/Program Files/nodejs/node.exe" set "NODE=C:/Program Files\nodejs\node.exe"
+if not defined NODE (
+    echo [´íÎó] ÕÒ²»µ½ node£¬µÚ 2 ²½Ğ¡³ÌĞò²âÊÔĞèÒªËü¡£
+    echo        Çë°²×° Node.js ºóÖØÊÔ£¬»òÖ»ÓÃ:  run_tests.bat 1
+    goto :fail
+)
+
+echo ±àÒëÆ÷: %CC%
+echo Node  : %NODE%
+echo.
+
 echo ==============================================
-echo  1/3  å›ºä»¶ MQTT æŠ¥æ–‡å±‚å•å…ƒæµ‹è¯•
+echo  1/3  ¹Ì¼ş MQTT ±¨ÎÄ²ãµ¥Ôª²âÊÔ
 echo ==============================================
-gcc -std=c99 -Wall -Wextra -I HARDWARE\net ^
-    tests\test_mqtt.c HARDWARE\net\mqtt_packet.c ^
-    -o tests\test_mqtt.exe
-if errorlevel 1 exit /b 1
+"%CC%" -std=c99 -Wall -Wextra -I HARDWARE\net tests\test_mqtt.c HARDWARE\net\mqtt_packet.c -o tests\test_mqtt.exe
+if errorlevel 1 goto :fail
 tests\test_mqtt.exe
-if errorlevel 1 exit /b 1
+if errorlevel 1 goto :fail
 
 echo.
 echo ==============================================
-echo  2/3  å°ç¨‹åº MQTT å®¢æˆ·ç«¯å•å…ƒæµ‹è¯•
+echo  2/3  Ğ¡³ÌĞò MQTT ¿Í»§¶Ëµ¥Ôª²âÊÔ
 echo ==============================================
-node tests\test_mqtt_js.js
-if errorlevel 1 exit /b 1
+"%NODE%" tests\test_mqtt_js.js
+if errorlevel 1 goto :fail
 
 echo.
 echo ==============================================
-echo  3/3  å›ºä»¶æ–°å¢æ¨¡å—è¯­æ³•è‡ªæ£€ï¼ˆstub å¤´æ–‡ä»¶ï¼‰
+echo  3/3  ¹Ì¼şĞÂÔöÄ£¿éÓï·¨×Ô¼ì£¨stub Í·ÎÄ¼ş£©
 echo ==============================================
-gcc -fsyntax-only -std=c99 -Wall -Wextra ^
-    -I tests\stub -I HARDWARE\net -I HARDWARE\bt24-hid ^
-    HARDWARE\net\bemfa_mqtt.c ^
-    HARDWARE\net\remote_cmd.c ^
-    HARDWARE\bt24-hid\ble.c
-if errorlevel 1 exit /b 1
-echo   bemfa_mqtt.c / remote_cmd.c / ble.c  è¯­æ³• ok
+"%CC%" -fsyntax-only -std=c99 -Wall -Wextra -I tests\stub -I HARDWARE\net -I HARDWARE\bt24-hid HARDWARE\net\bemfa_mqtt.c HARDWARE\net\remote_cmd.c HARDWARE\bt24-hid\ble.c
+if errorlevel 1 goto :fail
+echo   bemfa_mqtt.c / remote_cmd.c / ble.c  Óï·¨ ok
 
 echo.
-echo å…¨éƒ¨é€šè¿‡ã€‚
-echo æ³¨æ„ï¼šç¬¬ 3 æ­¥åªåšè¯­æ³•æ£€æŸ¥ï¼Œæ­£å¼ç¼–è¯‘è¯·åœ¨ Keil MDK é‡Œ Rebuild ä¸€æ¬¡ã€‚
+echo ----------------------------------------------
+echo  È«²¿Í¨¹ı£¨3/3£©¡£
+echo  ×¢Òâ£ºµÚ 3 ²½Ö»×öÓï·¨¼ì²é£¬ÕıÊ½¹Ì¼şÇëµ½ Keil MDK Àï Rebuild Ò»´Î¡£
+echo ----------------------------------------------
+goto :eof
+
+:fail
+echo.
+echo ----------------------------------------------
+echo  ×Ô¼ìÊ§°Ü£¬¼ûÉÏ·½±¨´í¡£
+echo ----------------------------------------------
 endlocal
+exit /b 1
