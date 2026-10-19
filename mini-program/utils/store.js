@@ -14,7 +14,9 @@ const DEFAULTS = {
     // 否则会把设备顶下线。这里用独立的固定 ID。
     clientId: "wxmp_lock01",
     // 要订阅/发布的主题（与固件里 BAFA_TOPIC_LOCK 一致）
-    topic: "lock001",
+    // 注意：巴法云的主题名和私钥是一对一的。填错主题时 SUBACK 会返回 0x80，
+    // 表现就是"连上了但一条消息都收不到"。
+    topic: "lock000",
     // 若 CONNACK 返回 4/5，说明需要用户名密码认证，去巴法云「连接密钥」页拿
     // 巴法云规则：ClientID 不等于私钥时，必须用 username=appID / password=secretKey 认证。
     // 小程序的 ClientID 是独立 ID（不是私钥），所以这两项是必填的，不能留空。

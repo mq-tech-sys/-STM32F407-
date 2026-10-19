@@ -90,6 +90,15 @@ int mqtt_connack_accepted(const mqtt_msg_t *m);
 int mqtt_connack_code(const mqtt_msg_t *m);
 
 /**
+ * @brief  SUBACK 的返回码（body = [报文标识符 2 字节, 每个主题 1 字节]）
+ * @retval 0x00~0x02 订阅成功；0x80 订阅被拒绝（巴法云：私钥与主题不匹配）；-1 非 SUBACK
+ */
+int mqtt_suback_code(const mqtt_msg_t *m);
+
+/** SUBACK 是否订阅成功（0x00 / 0x01 / 0x02） */
+int mqtt_suback_ok(const mqtt_msg_t *m);
+
+/**
  * @brief  从 PUBLISH 报文里拆出主题和负载（QoS0 / QoS1 都能处理）
  * @retval 0 成功；-1 报文格式非法；-2 topic 缓冲不够
  */

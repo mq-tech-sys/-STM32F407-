@@ -49,7 +49,7 @@
     <view class="field">
       <text class="field-label">主题名</text>
       <input class="field-input" data-key="topic" value="{{topic}}" bindinput="onInput"
-             placeholder="与固件一致，如 lock001" placeholder-class="ph" />
+             placeholder="与固件一致，如 lock000" placeholder-class="ph" />
     </view>
     <view class="field">
       <text class="field-label">ClientID</text>

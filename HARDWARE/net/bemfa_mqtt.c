@@ -152,6 +152,13 @@ static void on_message(const mqtt_msg_t *m)
 
     if (m->type == MQTT_TYPE_SUBACK)
     {
+        if (!mqtt_suback_ok(m))
+        {
+            /* 巴法云用 0x80 表达"这个私钥无权订阅这个主题"，此时收不到任何命令 */
+            printf("[MQTT] SUBACK 被拒绝，返回码=0x%02X，主题 %s 与私钥不匹配\r\n", (unsigned)mqtt_suback_code(m), BAFA_TOPIC_LOCK);
+            net_restart();
+            return;
+        }
         printf("[MQTT] 已订阅 %s，远程控制就绪\r\n", BAFA_TOPIC_LOCK);
         s_online    = 1;
         s_next_ping = xTaskGetTickCount() + pdMS_TO_TICKS(30000);

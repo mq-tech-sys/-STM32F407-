@@ -219,7 +219,7 @@ sh tests/run_tests.sh
 #define WIFI_NAME       "ymq"           // ← 改成自己的 WiFi SSID（ESP8266 只支持 2.4G）
 #define WIFI_PASSWORD   "88888888"      // ← 改成自己的 WiFi 密码
 #define BAFA_UID        "28ecc..."      // ← 巴法云 MQTT 控制台里的「私钥」，用作 ClientID
-#define BAFA_TOPIC_LOCK "lock001"       // ← 主题名，与小程序里填的保持一致
+#define BAFA_TOPIC_LOCK "lock000"       // ← 主题名，与小程序里填的保持一致
 #define BAFA_HOST       "bemfa.com"
 #define BAFA_PORT       9501            // MQTT 明文端口
 #define MQTT_KEEPALIVE_S 60
@@ -285,7 +285,7 @@ sh tests/run_tests.sh
 | 项 | 填什么 |
 | --- | --- |
 | 服务器 | `wss://bemfa.com:9504/wss`（小程序只能连加密 WebSocket，巴法云对应端口 9504、路径 `/wss`） |
-| 主题名 | 与固件 `BAFA_TOPIC_LOCK` 一致，例如 `lock001` |
+| 主题名 | 与固件 `BAFA_TOPIC_LOCK` 一致，例如 `lock000` |
 | ClientID | **必须是设备之外的另一个 ID**，默认 `wxmp_lock01` |
 | 用户名 / 密码 | **必填**：填巴法云「连接密钥」页的 `appID` / `secretKey`。因为 ClientID 不是私钥，巴法云走的是账号密码认证，留空会返回 4/5 |
 | Service / 特征值 UUID | 留空 = 自动识别（遍历服务挑第一个可写特征值）；识别不到时先连上设备，点「列出已连接设备的全部 UUID」，点一行自动填入 |
@@ -295,7 +295,7 @@ sh tests/run_tests.sh
 ### 怎么用（云端模式）
 
 1. **设备端先就位**：板子插 ESP8266，`HARDWARE/net/bemfa_mqtt.h` 里填 WiFi 和主题名，烧录后上电。串口看到连上 WiFi + MQTT 才算准备好。
-2. 巴法云控制台建一个同名主题（如 `lock001`），类型选插座/开关都行。
+2. 巴法云控制台建一个同名主题（如 `lock000`），类型选插座/开关都行。
 3. 小程序打开 → **设置页**确认主题名与固件一致 → 保存。
 4. 回 **控制页**，顶部选「云端 MQTT」，脚本会自动连；圆点变绿 = 已连上。
 5. 点 **开锁**，舵机转 90° 并在 **2 秒后自动回锁**，状态会实时回显在这张卡片上。

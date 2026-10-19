@@ -35,7 +35,7 @@
 #define BAFA_UID           "28eccdb351e4bf84ad1390c143846844"
 
 /** 巴法云 MQTT 控制台 -> 主题名 */
-#define BAFA_TOPIC_LOCK    "lock001"
+#define BAFA_TOPIC_LOCK    "lock000"
 
 /** MQTT 服务器 */
 #define BAFA_HOST          "bemfa.com"

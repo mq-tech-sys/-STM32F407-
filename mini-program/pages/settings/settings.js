@@ -23,7 +23,7 @@ Page({
     bleDiag: [],
     // 设备端（固件）使用的配置，仅供对照，改这里没用
     fwUid: "28eccdb351e4bf84ad1390c143846844",
-    fwTopic: "lock001"
+    fwTopic: "lock000"
   },
 
   onLoad() {

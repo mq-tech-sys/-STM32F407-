@@ -319,6 +319,19 @@ int mqtt_connack_code(const mqtt_msg_t *m)
 	return m->body[1];
 }
 
+int mqtt_suback_code(const mqtt_msg_t *m)
+{
+	if (m == NULL || m->type != MQTT_TYPE_SUBACK || m->blen < 3)
+		return -1;
+	return m->body[2];
+}
+
+int mqtt_suback_ok(const mqtt_msg_t *m)
+{
+	int rc = mqtt_suback_code(m);
+	return (rc == 0x00 || rc == 0x01 || rc == 0x02);
+}
+
 int mqtt_publish_split(const mqtt_msg_t *m,
                        char *topic, size_t topic_cap,
                        const uint8_t **payload, size_t *plen)

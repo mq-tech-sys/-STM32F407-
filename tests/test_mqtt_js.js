@@ -134,6 +134,21 @@ function testRejectedConnack() {
   console.log("  rejected connack       ok");
 }
 
+function testRejectedSuback() {
+  // 巴法云：主题名与私钥不匹配时 SUBACK 返回 0x80，此时不该继续装作在线
+  let errMsg = null;
+  const c = makeClient();
+  c.on("error", (m) => (errMsg = m));
+  openCb();
+  deliver([0x20, 0x02, 0x00, 0x00]); // CONNACK 成功
+  deliver([0x90, 0x03, 0x00, 0x01, 0x80]); // SUBACK 0x80 = 订阅被拒绝
+  assert.strictEqual(c.online, false, "订阅被拒绝后不能标记为在线");
+  checks++;
+  assert.ok(errMsg && errMsg.indexOf("0x80") >= 0, "应该报出订阅被拒绝");
+  checks++;
+  console.log("  rejected suback        ok");
+}
+
 function testDecodePublish() {
   const c = makeClient();
   openCb();
@@ -194,6 +209,7 @@ testSubscribeFrame();
 testPublishFrame();
 testHandshakeTriggersSubscribe();
 testRejectedConnack();
+testRejectedSuback();
 testDecodePublish();
 testSplitAndSticky();
 testUtf8Roundtrip();

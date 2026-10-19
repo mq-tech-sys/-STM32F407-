@@ -320,6 +320,14 @@ MqttClient.prototype._dispatch = function (pkt) {
   }
 
   if (pkt.type === T.SUBACK) {
+    // body = [报文标识符 2 字节, 每个主题 1 字节返回码]
+    const rc = pkt.body.length > 2 ? pkt.body[2] : 0;
+    if (rc === 0x80) {
+      // 巴法云：私钥/密钥与主题名不匹配时返回 0x80，此时收不到任何消息
+      this.emit("error", "订阅被拒绝（0x80）：主题名和凭据不是同一个主题，检查设置页的主题名");
+      this.emit("closed", { code: 0x80 });
+      return;
+    }
     this.online = true;
     this.emit("log", "订阅成功: " + ((this.cfg && this.cfg.topics) || []).join(","));
     this.emit("online", null);
