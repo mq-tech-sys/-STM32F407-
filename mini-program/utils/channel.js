@@ -70,6 +70,9 @@ Channel.prototype._wire = function () {
   self.ble.on("device", function (a) {
     if (self.mode === "ble") self.emit("device", a);
   });
+  self.ble.on("scan", function (a) {
+    if (self.mode === "ble") self.emit("scan", a);
+  });
 
   self.mqtt.on("online", function () {
     self._status({ connected: true, online: true });
@@ -144,6 +147,11 @@ Channel.prototype.openBle = function () {
 Channel.prototype.scanBle = function () {
   this.reloadConfig();
   return this.ble.startScan(this.cfg.ble.nameFilter);
+};
+
+/** 蓝牙自检：扫描为空时先看这个结果 */
+Channel.prototype.diagnoseBle = function () {
+  return this.ble.diagnose();
 };
 
 Channel.prototype.connectBle = function (deviceId) {

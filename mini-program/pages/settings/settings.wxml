@@ -121,13 +121,29 @@
              placeholder="留空 = 自动识别" placeholder-class="ph" />
     </view>
 
-    <view class="hint">串口透传模块（JDY-24 之类）常见服务 <text class="strong">0000FFE0</text>、特征值 <text class="strong">0000FFE1</text>，留空也能自动识别。</view>
+    <view class="hint">串口透传模块（JDY-24 / HM-10 / AT-09 之类）常见服务 <text class="strong">0000FFE0</text>、特征值 <text class="strong">0000FFE1</text>，留空也能自动识别。</view>
+    <view class="hint box warn">
+      <view class="icon icon-sm i-shield"></view>
+      <view class="hint-text">必须是 <text class="strong">BLE（低功耗蓝牙）</text>模块。ESP8266 只有 WiFi、<text class="strong">没有蓝牙</text>；HC-05/06、JDY-31 这类经典蓝牙小程序也连不上。</view>
+    </view>
 
     <view class="section-gap"></view>
     <button class="btn plain" bindtap="onShowUuids">
       <view class="icon icon-sm i-terminal"></view>
       <text>列出已连接设备的全部 UUID</text>
     </button>
+
+    <view class="section-gap"></view>
+    <button class="btn plain" bindtap="onBleDiag">
+      <view class="icon icon-sm i-bt"></view>
+      <text>蓝牙自检（扫描不到设备时用）</text>
+    </button>
+
+    <view wx:if="{{bleDiag.length > 0}}" class="hint box">
+      <view class="hint-text">
+        <view wx:for="{{bleDiag}}" wx:key="index">{{item}}</view>
+      </view>
+    </view>
 
     <view wx:if="{{uuidList.length > 0}}">
       <view class="section-gap"></view>

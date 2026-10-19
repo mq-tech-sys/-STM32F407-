@@ -24,10 +24,11 @@ $CC $CFLAGS -I HARDWARE/net \
 
 echo
 echo "=============================================="
-echo " 2/4  小程序 MQTT 客户端单元测试"
+echo " 2/4  小程序单元测试（MQTT 客户端 + 蓝牙扫描）"
 echo "=============================================="
 NODE="${NODE:-node}"
 $NODE tests/test_mqtt_js.js
+$NODE tests/test_ble.js
 
 echo
 echo "=============================================="

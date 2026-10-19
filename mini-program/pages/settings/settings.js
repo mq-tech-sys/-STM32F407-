@@ -20,6 +20,7 @@ Page({
     serviceId: "",
     characteristicId: "",
     uuidList: [],
+    bleDiag: [],
     // 设备端（固件）使用的配置，仅供对照，改这里没用
     fwUid: "28eccdb351e4bf84ad1390c143846844",
     fwTopic: "lock001"
@@ -122,6 +123,33 @@ Page({
       })
       .catch(function (e) {
         wx.showToast({ title: e.message || "读取失败", icon: "none" });
+      });
+  },
+
+  /** 蓝牙自检：扫描列表为空时先跑这个，区分"没权限/系统关了/附近真没有" */
+  onBleDiag() {
+    const self = this;
+    const c = ch();
+    this.setData({ bleDiag: ["自检中…"] });
+
+    c.diagnoseBle()
+      .then(function (d) {
+        const yes = (v) => (v ? "是" : "否");
+        self.setData({
+          bleDiag: [
+            "适配器已初始化：" + yes(d.adapterReady),
+            "系统蓝牙可用：" + yes(d.available),
+            "系统蓝牙开关：" + (d.bluetoothEnabled === null ? "未知" : yes(d.bluetoothEnabled)),
+            "系统定位开关：" + (d.locationEnabled === null ? "未知" : yes(d.locationEnabled)),
+            "小程序蓝牙授权：" + (d.bluetoothAuthorized || d.scopeBluetooth || "未知"),
+            "小程序定位授权：" + (d.locationAuthorized || d.scopeLocation || "未知"),
+            "正在扫描：" + yes(d.discovering),
+            "已发现设备：" + d.found + " 个"
+          ]
+        });
+      })
+      .catch(function (e) {
+        self.setData({ bleDiag: ["自检失败：" + (e.message || e)] });
       });
   },
 

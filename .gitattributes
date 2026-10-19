@@ -1,0 +1,5 @@
+# 自检脚本的换行必须固定，否则 checkout 到另一台机器后会跑不起来：
+#   .bat 用 LF 时 cmd 的 ^ 续行会失效（gcc 命令被截断）
+#   .sh  用 CRLF 时 bash 报 bad interpreter
+*.sh   text eol=lf
+*.bat  text eol=crlf

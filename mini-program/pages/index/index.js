@@ -22,6 +22,7 @@ Page({
     logs: [],
     devices: [],
     scanning: false,
+    scanStat: { total: 0, named: 0, matched: 0, filter: "", error: "" },
     bleServiceHint: ""
   },
 
@@ -43,12 +44,31 @@ Page({
     this._hMsg = function (m) {
       self.onDeviceMessage(m.msg);
     };
-    this._hDev = function (d) {
-      const list = (c.ble.devices || []).filter(function (x) {
-        const f = (c.cfg.ble.nameFilter || "").trim();
-        return !f || (x.name || "").indexOf(f) >= 0;
-      });
-      self.setData({ devices: list });
+    this._hDev = function () {
+      self.syncDevices();
+    };
+    this._hScan = function (st) {
+      const was = self.data.scanning;
+      const now = !!(st && st.discovering);
+      self.setData({ scanning: now, scanStat: st || {} });
+      self.syncDevices();
+      // 扫描刚结束：给一句结论，别让人对着空列表猜
+      if (was && !now) {
+        const s = st || {};
+        if (s.error) {
+          self.addLog(s.error, "err");
+        } else if (!s.total) {
+          self.addLog(
+            "扫描结束：一个设备都没发现。去「设置 → 蓝牙自检」看是权限、系统蓝牙还是附近真没有模块",
+            "err"
+          );
+        } else {
+          self.addLog(
+            "扫描结束：发现 " + s.total + " 个设备，其中 " + s.named + " 个有名字",
+            ""
+          );
+        }
+      }
     };
 
     c.on("status", this._hStatus);
@@ -56,6 +76,7 @@ Page({
     c.on("error", this._hErr);
     c.on("message", this._hMsg);
     c.on("device", this._hDev);
+    c.on("scan", this._hScan);
 
     this.addLog("通道：" + (c.mode === "cloud" ? "云端 MQTT" : "蓝牙直连"), "");
     this.syncHeader();
@@ -75,6 +96,12 @@ Page({
       topic: (c.cfg && c.cfg.bemfa && c.cfg.bemfa.topic) || "",
       bleName: (ble && ble.deviceName) || ""
     });
+  },
+
+  /** 把蓝牙模块里缓存的设备列表同步到页面（不再按名字过滤，只打标记） */
+  syncDevices() {
+    const c = ch();
+    this.setData({ devices: (c.ble.devices || []).slice() });
   },
 
   onToggleTheme() {
@@ -144,14 +171,44 @@ Page({
       this.setData({ scanning: false });
       return;
     }
-    this.setData({ devices: [], scanning: true });
+    this.setData({
+      devices: [],
+      scanning: true,
+      scanStat: { total: 0, named: 0, matched: 0, filter: "", error: "" }
+    });
     c.scanBle()
       .then(function () {
-        self.addLog("扫描中（只显示有名字的 BLE 设备）…", "");
+        self.addLog("开始扫描（12 秒），附近所有 BLE 设备都会列出来…", "");
       })
       .catch(function (e) {
         self.setData({ scanning: false });
         self.addLog(e.message || "扫描失败", "err");
+      });
+  },
+
+  /** 扫描为空时的一键排查：把系统蓝牙/定位/授权状态打到日志里 */
+  onScanHelp() {
+    const self = this;
+    const c = ch();
+    c.diagnoseBle()
+      .then(function (d) {
+        const yes = (v) => (v ? "是" : "否");
+        self.addLog("— 蓝牙自检 —", "");
+        self.addLog("适配器已初始化：" + yes(d.adapterReady) + "，系统蓝牙可用：" + yes(d.available), "");
+        self.addLog(
+          "系统蓝牙开关：" + (d.bluetoothEnabled === null ? "未知" : yes(d.bluetoothEnabled)) +
+            "，定位开关：" + (d.locationEnabled === null ? "未知" : yes(d.locationEnabled)),
+          ""
+        );
+        self.addLog(
+          "小程序授权：蓝牙 " + (d.bluetoothAuthorized || d.scopeBluetooth || "未知") +
+            "，定位 " + (d.locationAuthorized || d.scopeLocation || "未知"),
+          ""
+        );
+        self.addLog("已发现设备：" + d.found + " 个" + (d.error ? "，上次错误：" + d.error : ""), "");
+      })
+      .catch(function (e) {
+        self.addLog(e.message || "自检失败", "err");
       });
   },
 
