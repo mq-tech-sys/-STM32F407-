@@ -126,6 +126,11 @@ sim\run-local.bat    ::  built-in broker only, nothing leaves the machine
 sim\probe.bat        ::  link diagnostics: device TCP / mini program WSS / round trip
 ```
 
+> **Requirements: Python 3 (3.8+) and nothing else.** The simulator is pure standard library —
+> no `pip install`, no Node, no Java, no database. If Python is missing, grab it from python.org
+> and tick **"Add Python to PATH"** on the first installer page. The mini program still needs
+> WeChat DevTools, which is a WeChat tool and cannot be avoided.
+
 <img src="sim/console.png" width="720">
 
 See [`sim/README.md`](sim/README.md) for the protocol table and [`sim/TEST-STEPS.md`](sim/TEST-STEPS.md) for a click-by-click walkthrough.

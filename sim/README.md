@@ -20,6 +20,24 @@ ASCII 行协议（`unlock` / `fp_list` / `fp_del:2` …）。没有板子在身�
 
 ---
 
+## 运行前提：只要 Python 3，别的都不用装
+
+整个模拟器只用 Python **标准库**（socket / ssl / threading / http / json …），
+**没有任何第三方依赖，不需要 `pip install`，也不需要 Node、Java、数据库。**
+
+| 你机器上的情况 | 双击 `run.bat` 会怎样 |
+| --- | --- |
+| 装了 Python 3，`python` 在 PATH 里 | 直接跑起来 |
+| 装了但只有 `py` 启动器 | 脚本自动退到 `py -3`，照样跑 |
+| 没装 Python | 窗口提示 `Python 3 not found. Install Python 3.8+ ...` 后退出 |
+
+没装就去 <https://www.python.org/downloads/> 下 3.8 以上版本，**安装第一页务必勾上
+"Add Python to PATH"**，否则双击还是找不到。
+
+> 小程序那一侧仍然需要**微信开发者工具**——那是微信官方的工具，跟这台模拟器无关，绕不开。
+
+---
+
 ## 快速开始
 
 双击 **`sim/run.bat`**，会自动打开控制台 <http://127.0.0.1:8848>。

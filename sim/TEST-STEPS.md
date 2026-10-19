@@ -2,6 +2,10 @@
 
 > 前提：仓库里的 `sim/` 已经启动（双击 `sim\run.bat`），控制台 <http://127.0.0.1:8848> 开着。
 > 没启动就双击 `run.bat`，等它打印出「控制台 : http://127.0.0.1:8848」再往下做。
+>
+> 启动只需要 **Python 3（3.8+）**，没有任何第三方依赖，不用 `pip install`。
+> 双击后窗口一闪就没了、提示 `Python 3 not found`，说明没装 Python——
+> 去 python.org 下载安装，第一页勾上 **"Add Python to PATH"** 再试。
 
 ---
 
