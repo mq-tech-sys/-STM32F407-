@@ -5,14 +5,12 @@
 > 配套**微信小程序**，可以远程开关门、远程录入指纹、远程添加/删除卡片。
 
 <p align="center">
-  <img src="mini-program/screenshots/control-light.png" width="215">
+  <img src="mini-program/screenshots/control-light.png" width="240">
   &nbsp;
-  <img src="mini-program/screenshots/features-light.png" width="215">
-  &nbsp;
-  <img src="mini-program/screenshots/settings-light.png" width="215">
+  <img src="mini-program/screenshots/features-light.png" width="240">
 </p>
 
-<p align="center"><sub>小程序三页 · 控制 / 功能 / 设置（浅色主题；深色主题与全部截图见「九、小程序」）</sub></p>
+<p align="center"><sub>小程序 · 控制 / 功能（浅色主题；深色主题与全部截图见「九、小程序」）</sub></p>
 
 > 板子不在手边也能把小程序测通：仓库里带了一台 [**Windows 虚拟门锁**](sim/)，说的和固件是同一套协议，只要 Python 3、不用装别的，见下面 7.2 节。
 
@@ -375,10 +373,6 @@ tests\run_tests.bat        :: 第 6 步就是它
 | 设置 · 浅色 | 设置 · 深色 |
 |:--:|:--:|
 | <img src="mini-program/screenshots/settings-light.png" width="180"> | <img src="mini-program/screenshots/settings-dark.png" width="180"> |
-
-> 这几张图不是手 P 的：`tools/render_preview.js` 直接读 `app.wxss` 和页面的 `wxml/wxss`，
-> 按 375 宽手机屏渲染、再整页截图，等于把开发者工具的渲染结果直接导出来。
-> 改了界面重跑 `node tools/render_preview.js --png` 就会覆盖 `mini-program/screenshots/` 里的图。
 
 图标分两套：
 
