@@ -51,6 +51,7 @@ EventBits_t xEventGroupWaitBits(EventGroupHandle_t g, EventBits_t bits,
                                 int clear, int wait_all, TickType_t wait);
 int         xSemaphoreTake(SemaphoreHandle_t s, TickType_t wait);
 int         xSemaphoreGive(SemaphoreHandle_t s);
+SemaphoreHandle_t xSemaphoreCreateMutex(void);
 
 /* ---- 串口（真实实现只在 SYSTEM/usart） ---- */
 typedef struct { uint32_t SR; uint32_t DR; } USART_TypeDef;
@@ -114,5 +115,8 @@ void  bemfa_mqtt_init(void);
 void  bemfa_mqtt_task(void);
 void  ble24_init(void);
 void  ble24_task(void);
+
+/* ---- 掉电保存（真实声明在 HARDWARE/param/param.h） ---- */
+#include "param.h"
 
 #endif /* __STUB_INCLUDE_H */

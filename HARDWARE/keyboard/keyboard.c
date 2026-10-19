@@ -284,9 +284,16 @@ void password_change_mode(void)
     input_password(new_pwd2, PASSWORD_MAX_LEN);
 
     // 验证两次输入是否一致
-    if (strcmp(new_pwd1, new_pwd2) == 0)
+    if (strlen(new_pwd1) == 0)
+    {
+        OLED_Clear();
+        oled_show_string(9, 4, "密码不能为空!");
+        delay_ms(1000);
+    }
+    else if (strcmp(new_pwd1, new_pwd2) == 0)
     {
         strcpy(g_password, new_pwd1);
+        param_save_password();
         printf("修改密码成功! 新密码: %s\r\n", g_password);
         OLED_Clear();
         oled_show_string(9, 4, "修改成功!");

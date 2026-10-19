@@ -544,6 +544,7 @@ void add_card(void)
 				{
 					memcpy(g_card_list[g_card_count].uid, card_uid, 4);
 					g_card_count++;
+					param_save_cards();
 
 					dgb_printf_safe("[RFID] 卡添加成功！卡号: %02X %02X %02X %02X\r\n",
 									card_uid[0], card_uid[1], card_uid[2], card_uid[3]);
@@ -581,6 +582,7 @@ void delete_all_cards(void)
 {
 	memset(g_card_list, 0, sizeof(g_card_list));
 	g_card_count = 0;
+	param_save_cards();
 
 	dgb_printf_safe("[RFID] 所有卡已删除\r\n");
 	OLED_Clear();
@@ -607,6 +609,7 @@ uint8_t delete_card_by_index(uint8_t idx)
 	}
 	memset(g_card_list[g_card_count - 1].uid, 0, 4);
 	g_card_count--;
+	param_save_cards();
 
 	dgb_printf_safe("[RFID] 已删除第 %u 张卡，剩余 %u 张\r\n",
 					(unsigned)idx, (unsigned)g_card_count);

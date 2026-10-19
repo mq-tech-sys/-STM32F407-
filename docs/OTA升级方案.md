@@ -23,9 +23,9 @@
    现有固件从 `0x08000000` 开始跑，没有引导程序，无法自己替换自己。
 2. **Flash 必须重新分区**，App 的链接地址要从 `0x08000000` 改到 `0x08010000`，
    Keil 的 IROM1 和 `VECT_TAB_OFFSET` 都要改。改完之后**旧固件不能再直接覆盖烧**。
-3. **现工程有两个数据没有掉电保存**——密码 `g_password`、卡片列表 `g_card_list`。
-   OTA 必然重启，不先补上这两处持久化，**每次升级都会把用户密码重置成 123456、卡片全部清空**。
-   这是 OTA 的前置依赖，不是可选项。
+3. **密码 `g_password` 和卡片列表 `g_card_list` 已经补上掉电保存**（`HARDWARE/param/param.c`，
+   写在 S3 扇区，日志式追加 + CRC）。这一条原本是 OTA 的硬前置：不补的话，
+   每次升级重启都会把密码重置成 123456、卡片全部清空。
 
 ---
 
@@ -51,17 +51,20 @@ STM32F407ZE 的 512 KB 分为 8 个扇区：S0~S3 各 16 KB、S4 为 64 KB、S5~
 
 | 区域 | 扇区 | 起始地址 | 大小 | 用途 |
 |---|---|---|---|---|
-| Bootloader | S0–S2 | `0x08000000` | 48 KB | 上电决策、搬运镜像、回滚；OTA 永不擦写 |
-| 元数据区 | S3 | `0x0800C000` | 16 KB | 追加式记录：当前状态、版本、CRC、启动次数 |
+| Bootloader | S0–S1 | `0x08000000` | 32 KB | 上电决策、搬运镜像、回滚；OTA 永不擦写 |
+| OTA 元数据 | S2 | `0x08008000` | 16 KB | 追加式记录：当前状态、版本、CRC、启动次数 |
+| **用户参数** | S3 | `0x0800C000` | 16 KB | 密码 / 卡片列表，**已实现**（`HARDWARE/param`），位置永不变 |
 | **运行区** | S4–S5 | `0x08010000` | 192 KB | App 实际执行的位置（链接地址） |
 | **下载区** | S6 | `0x08040000` | 128 KB | OTA 期间新镜像先落这里 |
 | **备份区** | S7 | `0x08060000` | 128 KB | 旧镜像的最后一版，回滚用 |
 
 ```
 0x08000000 ┌──────────────┐
-           │  Bootloader  │ 48 KB   S0-S2
+           │  Bootloader  │ 32 KB   S0-S1
+0x08008000 ├──────────────┤
+           │  OTA 元数据  │ 16 KB   S2（日志式追加，几乎不擦除）
 0x0800C000 ├──────────────┤
-           │  OTA 元数据  │ 16 KB   S3（日志式追加，几乎不擦除）
+           │  用户参数    │ 16 KB   S3  ← 密码/卡片，OTA 阶段也不搬
 0x08010000 ├──────────────┤
            │              │
            │   运行区     │ 192 KB  S4-S5  ← App 链接在这里
@@ -106,7 +109,7 @@ STM32F407ZE 的 512 KB 分为 8 个扇区：S0~S3 各 16 KB、S4 为 64 KB、S5~
 
 ## 五、三个角色
 
-### 5.1 Bootloader（48 KB，上电第一段代码）
+### 5.1 Bootloader（32 KB，上电第一段代码）
 
 只做四件事，不联网、不驱动外设：
 
@@ -299,16 +302,18 @@ static void jump_to_app(uint32_t base)
 > 建议在 `feature/ota` 分支上做，改完打 tag `v1.0-bootloader`。
 > 固件源码是 **GBK + CRLF**，新增 `.c/.h` 也要保持 GBK，否则 Keil 里中文注释乱码。
 
-**A1. 补两个持久化（前置依赖）**
-把 `g_password` 和 `g_card_list` 存进元数据区（或备份寄存器）。
-不做这一步，每次 OTA 后密码回 `123456`、卡片全丢。
+**A1. 确认参数区不被代码盖掉（已完成）**
+密码 / 卡片现在存在 S3（`0x0800C000`），由 `HARDWARE/param/param.c` 管理。
+为保证代码永远长不到 S3，`FreeRTOS.uvprojx` 的 IROM1 已改成 `0x08000000 / 0xC000`（48 KB），
+超出会直接链接报错。等 OTA 做完、App 搬到 `0x08010000` 之后，这个上限可以放宽到 192 KB。
+**S3 在 OTA 改造中不要动**——用户数据就放在那里。
 
 **A2. 建 Bootloader 工程**
 - 新建 Keil 工程 `BOOTLOADER/`，芯片同样选 STM32F407ZE；
-- IROM1：`0x08000000`，大小 `0xC000`（48 KB）；
+- IROM1：`0x08000000`，大小 `0x8000`（32 KB）；
 - 只包含：启动文件、`system_stm32f4xx.c`、时钟、`FLASH` 驱动、`ota_meta.c`、`main.c`；
 - 不初始化 OLED/指纹/舵机/WiFi，**越简单越不容易变砖**；
-- 编译后确认 bin < 48 KB（预期 8 KB 左右）。
+- 编译后确认 bin < 32 KB（预期 8 KB 左右）。
 
 **A3. 改 App 的链接地址**
 - `Options → Target → IROM1`：Start `0x08010000`，Size `0x30000`；
@@ -331,9 +336,10 @@ static void jump_to_app(uint32_t base)
 **A4. 加分区与元数据模块** `HARDWARE/ota/ota_layout.h`
 
 ```c
-#define OTA_BL_ADDR      0x08000000u   /* S0-S2, 48KB */
-#define OTA_META_ADDR    0x0800C000u   /* S3, 16KB */
-#define OTA_META_SECTOR  FLASH_Sector_3
+#define OTA_BL_ADDR      0x08000000u   /* S0-S1, 32KB */
+#define OTA_META_ADDR    0x08008000u   /* S2, 16KB */
+#define OTA_META_SECTOR  FLASH_Sector_2
+#define PARAM_ADDR       0x0800C000u   /* S3, 16KB，用户密码/卡片，OTA 永不碰 */
 #define OTA_RUN_ADDR     0x08010000u   /* S4-S5, 192KB */
 #define OTA_RUN_SECTOR_A FLASH_Sector_4
 #define OTA_RUN_SECTOR_B FLASH_Sector_5
@@ -503,7 +509,7 @@ python tools\ota_pack.py <app.bin> -v <版本> [-o 输出.ota] [--verify]
 
 | 阶段 | 内容 | 规模 | 能否离线验证 |
 |---|---|---|---|
-| P0 | 密码/卡片持久化（前置） | 约 150 行 | 可在 sim 里跑 |
+| P0 | 密码/卡片持久化 | **已完成** | PC 单测 8 组全过 |
 | P1 | Bootloader + 分区 + 元数据 | 约 400 行 | 只能语法自检 |
 | P2 | App 侧 OTA 模块 + 协议 | 约 500 行 | 语法自检 + PC 单测 CRC |
 | P3 | 上位机 pack/push 工具 | 约 350 行 | **可以完整跑通** |

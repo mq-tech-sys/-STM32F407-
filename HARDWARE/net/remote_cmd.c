@@ -401,6 +401,7 @@ void remote_cmd_handle_line(char *line)
         if (copy_digits(rest, pwd, sizeof pwd))
         {
             strcpy(g_password, pwd);
+            param_save_password();
             printf("[REMOTE] ÃÜÂëÒÑÐÞ¸Ä\r\n");
             remote_cmd_send("ack=pwd_set_ok");
         }

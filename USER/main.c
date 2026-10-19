@@ -150,6 +150,10 @@ static void task_init(void *pvParameters)
 	keyboard_init();
 	MFRC522_Initializtion();
 	OLED_Clear();
+
+	/* 从 Flash 恢复密码与卡片列表（必须在任务开始前做完，
+	 * 否则刷卡任务会拿着空的卡表去比对） */
+	param_init();
 	/* 注意：USART3（WiFi/蓝牙）的初始化放在各自的网络任务里，
 	 * 因为联网状态机依赖 FreeRTOS 的 tick 计数 */
 

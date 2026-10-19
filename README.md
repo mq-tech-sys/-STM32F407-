@@ -164,6 +164,7 @@ HARDWARE/
   mfrc522/     RC522 驱动 + 卡列表管理 + 刷卡解锁
   oled/        SSD1306 + 中文点阵显示
   bt24-hid/    ble.c：蓝牙透传链路（字节流 → 行）
+  param/       ★ 掉电保存：密码 / 卡片写内部 Flash S3，CRC16 + 日志式追加
   keyboard/ key/ servo/ beep/ LED/
 SYSTEM/        sys(GPIO 位带) / delay / usart(含 USART3 接收环形缓冲) / tim
 USER/          main.c（任务定义与调度）+ include.h + 中断服务 + Keil 工程
@@ -273,14 +274,14 @@ python tests\test_protocol.py     :: 32 条用例，全部对齐 remote_cmd.c
 方案已经论证完整，**固件代码还没实现**，只做好了打包工具。全部细节见
 [`docs/OTA升级方案.md`](docs/OTA升级方案.md)。要点：
 
-- 512 KB Flash 切成 48K Bootloader / 16K 元数据 / 192K 运行区 / 128K 下载区 / 128K 备份区，
-  当前固件只有 37.8 KB，余量足够
+- 512 KB Flash 切成 32K Bootloader / 16K OTA 元数据 / 16K 用户参数 /
+  192K 运行区 / 128K 下载区 / 128K 备份区，当前固件只有 37.8 KB，余量足够
 - 用「单镜像 + 下载区 + 备份区」，不用 A/B 双槽——Keil 的固件是绝对地址，
   同一份 bin 放到另一个地址跑必然飞掉
 - 复用现有巴法云主题，二进制帧首字节 `0x02` 与文本命令区分，不用新开主题、不用第二把私钥
 - 断点续传、整包 CRC32、启动两次未确认自动回滚
 - 打包：`python tools\ota_pack.py OBJ\app.bin -v 1.3`（会检查链接地址和 128 KB 上限）
-- **前置条件**：先补密码和卡片的掉电保存，否则每次升级都会把用户数据清空
+- 密码与卡片的掉电保存已先做好（见 8.4），升级重启不会丢用户数据
 - **第一次仍然必须用 ST-Link 有线烧一次 Bootloader**，OTA 只能免掉"以后"
 
 
@@ -302,7 +303,7 @@ python tests\test_protocol.py     :: 32 条用例，全部对齐 remote_cmd.c
 
 ```c
 #define PASSWORD_MAX_LEN 6          // 密码位数
-#define DEFAULT_PASSWORD "123456"   // 默认密码（可长按 KEY2 或小程序远程修改，掉电不保存）
+#define DEFAULT_PASSWORD "123456"   // 出厂默认密码；修改后会写进内部 Flash，掉电保留
 ```
 
 ### 8.3 WiFi / 蓝牙二选一 —— `USER/include.h`
@@ -315,6 +316,38 @@ python tests\test_protocol.py     :: 32 条用例，全部对齐 remote_cmd.c
 ```
 
 > **硬件限制**：USART3 只有一组引脚（PB10/PB11），同一时刻只能接一个模块。所以"云端 + 蓝牙"对应**两份固件配置**，不能在同一块板子上同时用。小程序里两条通道都做了，用哪个取决于板子上插的是哪个模块。
+
+### 8.4 掉电保存 —— `HARDWARE/param/`
+
+**指纹不需要存**：AS608 的模板存在模块自己的 Flash 里，STM32 只是用 `PS_ValidTempleteNum`
+每次现查数量，断电不丢。真正掉电丢的只有密码和卡片列表，现在这两样都写进了内部 Flash。
+
+| 项目 | 位置 | 说明 |
+|---|---|---|
+| 存储介质 | 内部 Flash **S3 扇区**，`0x0800C000`，16 KB | F407 没有片内 EEPROM，板上也没有外挂 24Cxx / W25Qxx |
+| 记录方式 | 每条 64 字节，**追加写** | 改一次只写一条，不擦整扇区；256 条写满才压缩一次 |
+| 校验 | CRC16-CCITT + magic + 递增序号 | 断电写坏的记录会被跳过，自动退回上一条完好记录 |
+| 代码上限 | IROM1 已改为 `0x08000000 / 0xC000`（48 KB） | 防止代码长到 S3 把这个扇区盖掉 |
+
+```c
+param_init();            // task_init() 里调用，上电恢复密码与卡片
+param_save_password();   // 改密码后调用（本地键盘 / 小程序 pwd_set 都已接上）
+param_save_cards();      // 加卡 / 删卡后调用（加卡、删一张、删全部都已接上）
+```
+
+实测（PC 单测，不需要板子）：`tests/test_param.c` 8 组用例，覆盖空白 Flash、密码/卡片持久化、
+删卡后顺序、记录损坏回退、256 条写满压缩、两类记录互不覆盖、空密码拒绝。
+
+```bat
+tests\run_tests.bat        :: 第 6 步就是它
+```
+
+> 顺带修了一个漏洞：原来改密码时连按 `#` 提交空密码也能成功，重启后依旧生效，
+> 等于按 `#` 就能开门。现在输入 0 位会提示"密码不能为空"，`param_save_password()`
+> 也拒绝写入空密码，双保险。
+
+> 寿命：每次改密码/加删卡写一条 64 字节，256 次后才擦一次扇区。按每天改 10 次算，
+> 一个扇区能撑 20 年以上（F407 扇区擦写寿命 1 万次）。
 
 ## 九、小程序
 

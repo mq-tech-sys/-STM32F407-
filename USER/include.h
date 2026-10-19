@@ -26,6 +26,7 @@
 #include "ble.h"
 #include "stdarg.h"
 #include "MFRC522.h"
+#include "param.h"
 
 /* 按键事件标志位 */
 #define EVENT_KEY1_SHORT (1 << 0)
