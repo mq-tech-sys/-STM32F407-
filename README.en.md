@@ -113,7 +113,7 @@ tests/         PC-side self-checks (no Keil needed)
 sh tests/run_tests.sh    #  or tests\run_tests.bat on Windows
 ```
 
-Three stages: the firmware MQTT codec unit test (104 assertions), the mini program MQTT client unit test (byte-for-byte comparison of the packets both implementations generate), and a `gcc -fsyntax-only` check of the new firmware modules against stub headers. The third stage is a syntax check only — it does not replace a real Keil build.
+Five stages: the firmware MQTT codec unit test (104 assertions), the mini program unit tests (byte-for-byte comparison of the packets both implementations generate), the UI static checks, a secret scan over every tracked text file (the run fails if a Bemfa AppID or secret key slips in), and a `gcc -fsyntax-only` check of the new firmware modules against stub headers. The last stage is a syntax check only — it does not replace a real Keil build.
 
 ### No board at hand? Run the virtual lock
 

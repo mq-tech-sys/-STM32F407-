@@ -206,18 +206,19 @@ tests\run_tests.bat /nopause     :: 不停，CI / 脚本里用这个
 sh tests/run_tests.sh
 ```
 
-四步：
+五步：
 
 1. 固件 MQTT 报文层单测（`tests/test_mqtt.c`，104 项断言：定长/变长剩余长度、拆包、粘包、非法报文重同步、缓冲越界防护……）
 2. 小程序单测：`test_mqtt_js.js` **逐字节比对**两份实现生成的 CONNECT / SUBSCRIBE / PUBLISH 报文；`test_ble.js` 用假 `wx` 验证蓝牙扫描（设备合并、排序、过滤标记、兜底轮询、自检）；`test_features.js` 用假 `Page/getApp/wx` 跑功能页逻辑（列表拼装、单项删除命令、删除后自动刷新、`err=busy`）
 3. 小程序界面静态检查（`tests/test_ui.js`，159 项：wxml 标签配对、`bindtap` 的方法是否存在、用到的 `i-*` 图标类是否定义、深浅两套主题的 CSS 变量是否齐全、`app.json` 里页面与 tabBar 图标文件是否都在）
-4. 固件新增模块语法自检（`gcc -fsyntax-only` + `tests/stub/` 里的假头文件，抓拼写和原型不匹配）
+4. 敏感信息扫描（`tests/check_secrets.js`：扫所有 git 已跟踪的文本文件，出现巴法云 AppID / SecretKey 形态的字符串就红，防止密钥被写进代码或截图脚本）
+5. 固件新增模块语法自检（`gcc -fsyntax-only` + `tests/stub/` 里的假头文件，抓拼写和原型不匹配）
 
 全绿时最后会打印：
 
 ```
 ----------------------------------------------
- 全部通过（4/4）。
+ 全部通过（5/5）。
 ----------------------------------------------
 ```
 
