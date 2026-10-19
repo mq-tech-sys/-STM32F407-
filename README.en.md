@@ -133,6 +133,21 @@ sim\probe.bat        ::  link diagnostics: device TCP / mini program WSS / round
 
 <img src="sim/console.png" width="720">
 
+### OTA updates (designed, not implemented yet)
+
+The full design is in [`docs/OTA升级方案.md`](docs/OTA升级方案.md) (Chinese). In short:
+
+- 512 KB flash split into 48K bootloader / 16K metadata / 192K run area / 128K download area / 128K backup.
+  The current image is 37.8 KB, so there is plenty of headroom.
+- Single image with a download slot and a backup slot, **not** A/B slots: Keil output is absolute-addressed,
+  so the same binary cannot run from a second address.
+- Reuses the existing Bemfa topic; binary frames start with `0x02` so text commands are unaffected.
+- Resumable transfer, whole-image CRC32, and automatic rollback when a new image fails to confirm twice.
+- `python tools\ota_pack.py OBJ\app.bin -v 1.3` builds the package and rejects a binary whose vector table
+  still points at `0x08000000`.
+- Prerequisite: persist the password and card list first, otherwise every update wipes user data.
+- The first migration still needs a one-time wired flash of the bootloader over ST-Link.
+
 See [`sim/README.md`](sim/README.md) for the protocol table and [`sim/TEST-STEPS.md`](sim/TEST-STEPS.md) for a click-by-click walkthrough.
 
 

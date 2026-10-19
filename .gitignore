@@ -35,3 +35,8 @@ desktop.ini
 tests/test_mqtt.exe
 tests/*.o
 tests/*.exe
+__pycache__/
+*.pyc
+
+# ---------- OTA 升级包（本地生成） ----------
+*.ota

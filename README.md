@@ -172,7 +172,9 @@ font/          16×16 中文字库（116 字形）与索引表
 mini-program/  微信小程序（控制 / 功能 / 设置 三个页面，明暗双主题；图标在 images/，截图在 screenshots/）
 sim/           ★ Windows 虚拟门锁：没有板子也能联调小程序（纯标准库 Python）
 tests/         PC 端自检（不需要 Keil）
-tools/         辅助脚本（gen_tabbar_icons.py 生成 tabBar 图标、render_preview.js 渲染界面截图）
+tools/         辅助脚本（gen_tabbar_icons.py 生成 tabBar 图标、render_preview.js 渲染界面截图、
+               ota_pack.py 打 OTA 升级包）
+docs/          设计方案（OTA升级方案.md）
 ```
 
 ## 七、编译与烧录
@@ -265,6 +267,21 @@ python tests\test_protocol.py     :: 32 条用例，全部对齐 remote_cmd.c
 
 > 模拟器和真机的差别只有三处：录指纹/加卡是 2 秒后自动塞一条（真机要按手指、贴卡）、
 > 不会掉电重启、容量按 100 枚指纹 / 10 张卡。都写在 `sim/README.md` 里。
+
+### 7.3 远程升级（OTA）
+
+方案已经论证完整，**固件代码还没实现**，只做好了打包工具。全部细节见
+[`docs/OTA升级方案.md`](docs/OTA升级方案.md)。要点：
+
+- 512 KB Flash 切成 48K Bootloader / 16K 元数据 / 192K 运行区 / 128K 下载区 / 128K 备份区，
+  当前固件只有 37.8 KB，余量足够
+- 用「单镜像 + 下载区 + 备份区」，不用 A/B 双槽——Keil 的固件是绝对地址，
+  同一份 bin 放到另一个地址跑必然飞掉
+- 复用现有巴法云主题，二进制帧首字节 `0x02` 与文本命令区分，不用新开主题、不用第二把私钥
+- 断点续传、整包 CRC32、启动两次未确认自动回滚
+- 打包：`python tools\ota_pack.py OBJ\app.bin -v 1.3`（会检查链接地址和 128 KB 上限）
+- **前置条件**：先补密码和卡片的掉电保存，否则每次升级都会把用户数据清空
+- **第一次仍然必须用 ST-Link 有线烧一次 Bootloader**，OTA 只能免掉"以后"
 
 
 ## 八、配置
