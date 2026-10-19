@@ -124,6 +124,9 @@ function MqttClient() {
   this.keepalive = 60;
   this.manualClose = false;
   this.cfg = null;
+  this.lastRx = 0; // 最后一次收到报文的时刻，用来发现「假在线」
+  this._connectTimer = null;
+  this._failed = false;
 }
 
 MqttClient.prototype.on = function (evt, cb) {
@@ -151,19 +154,43 @@ MqttClient.prototype.connect = function (cfg) {
   this.keepalive = cfg.keepalive || 60;
   this.manualClose = false;
 
+  // 每次建链先把上一轮状态清干净。
+  // connected / online 是「上次连上过」的残留真值：旧 socket 悄悄断掉后若不清，
+  // 界面仍然允许发命令（日志只有 → 没有 ←），表现就是「连接好久、怎么控制都没反应」。
+  this.connected = false;
+  this.online = false;
+  this.buffer = [];
+  this.lastRx = 0;
+  this._failed = false;
+  this._stopTimer();
+  this._clearConnectTimer();
+  this._closeSocket();
+
   this.emit("log", "正在连接 " + cfg.url);
 
-  this.socket = wx.connectSocket({
+  const task = wx.connectSocket({
     url: cfg.url,
     success: () => {},
-    fail: (err) => {
-      self.emit("error", "WebSocket 建立失败：" + JSON.stringify(err));
-      self.emit("closed", null);
+    fail: function (err) {
+      self._fail("WebSocket 建立失败：" + JSON.stringify(err));
     }
   });
+  this.socket = task;
 
-  wx.onSocketOpen(function () {
+  // wx.onSocketXxx 是全局注册的：反复重连会叠加多份回调，旧 socket 的事件也可能串进来，
+  // 表现就是「看起来连上了，却一条报文都收不到」。优先用 SocketTask 自己的事件，
+  // 事件与这根 socket 一一对应。
+  const bind = function (name, globalName, cb) {
+    if (task && typeof task[name] === "function") {
+      task[name](cb);
+    } else if (wx && typeof wx[globalName] === "function") {
+      wx[globalName](cb);
+    }
+  };
+
+  bind("onOpen", "onSocketOpen", function () {
     self.connected = true;
+    self.lastRx = Date.now();
     self.emit("log", "WebSocket 已打开，发送 MQTT CONNECT");
     const body = [];
     // 可变头
@@ -179,25 +206,70 @@ MqttClient.prototype.connect = function (cfg) {
     const all = body.concat(cid, user, pass);
     self.socket.send({
       data: packet(T.CONNECT << 4, all),
-      fail: (e) => self.emit("error", "CONNECT 发送失败 " + JSON.stringify(e))
+      fail: function (e) {
+        self.emit("error", "CONNECT 发送失败 " + JSON.stringify(e));
+      }
     });
   });
 
-  wx.onSocketMessage(function (res) {
-    self._feed(res.data);
+  bind("onMessage", "onSocketMessage", function (res) {
+    self._feed(res && res.data);
   });
 
-  wx.onSocketError(function (err) {
+  bind("onError", "onSocketError", function (err) {
     self.emit("error", "WebSocket 错误：" + JSON.stringify(err));
   });
 
-  wx.onSocketClose(function (res) {
+  bind("onClose", "onSocketClose", function (res) {
+    self._clearConnectTimer();
     self.connected = false;
     self.online = false;
     self._stopTimer();
-    self.emit("log", "连接已关闭 code=" + res.code);
+    self.emit("log", "连接已关闭 code=" + ((res && res.code) || "?"));
     self.emit("closed", res);
   });
+
+  // 看门狗：卡在建链或卡在握手时给一句明确结论，而不是永远停在「正在连接」
+  this._connectTimer = setTimeout(function () {
+    self._connectTimer = null;
+    if (self.manualClose) return;
+    if (!self.connected) {
+      self._fail("8 秒没能建立 WebSocket（域名白名单 / 网络 / 端口被拦）");
+    } else if (!self.online) {
+      self._fail("WebSocket 已连上，但 8 秒内没收到 CONNACK 或订阅应答");
+    }
+  }, 8000);
+  if (this._connectTimer.unref) this._connectTimer.unref();
+};
+
+MqttClient.prototype._clearConnectTimer = function () {
+  if (this._connectTimer) {
+    clearTimeout(this._connectTimer);
+    this._connectTimer = null;
+  }
+};
+
+/** 关掉上一根 socket（建链时用，不触发重连） */
+MqttClient.prototype._closeSocket = function () {
+  const s = this.socket;
+  this.socket = null;
+  if (!s || typeof s.close !== "function") return;
+  try {
+    s.close({});
+  } catch (e) {}
+};
+
+/** 建链/握手失败：只报一次错，然后交给上层重连 */
+MqttClient.prototype._fail = function (reason) {
+  if (this._failed) return;
+  this._failed = true;
+  this._clearConnectTimer();
+  this.connected = false;
+  this.online = false;
+  this._stopTimer();
+  this._closeSocket(); // 别把这根废掉的连接留在那儿
+  this.emit("error", reason);
+  this.emit("closed", { code: -1, reason: reason });
 };
 
 MqttClient.prototype._stopTimer = function () {
@@ -213,6 +285,17 @@ MqttClient.prototype._startTimer = function () {
   // KeepAlive 的一半发一次，和固件端一致
   this.timer = setInterval(function () {
     if (!self.connected) return;
+
+    // 假在线检测：socket 还在、却长时间收不到任何报文（连 PINGRESP 都没有），
+    // 说明这根连接其实已经废了。不主动报错的话，界面会一直显示「已连接」，
+    // 用户点按钮只能看到 → 却永远等不到 ←。
+    const idle = self.lastRx ? Date.now() - self.lastRx : 0;
+    const limit = Math.max(20, self.keepalive * 2) * 1000;
+    if (idle > limit) {
+      self._fail("已 " + Math.round(idle / 1000) + " 秒没收到任何报文，判定连接失效（自动重连）");
+      return;
+    }
+
     self.socket.send({
       data: packet(T.PINGREQ << 4, []),
       fail: function () {}
@@ -238,28 +321,49 @@ MqttClient.prototype.publish = function (topic, msg) {
 
 MqttClient.prototype.close = function () {
   this.manualClose = true;
+  this._clearConnectTimer();
   this._stopTimer();
   if (this.socket && this.connected) {
     try {
       this.socket.send({ data: packet(T.DISCONNECT << 4, []) });
     } catch (e) {}
-    this.socket.close({});
   }
+  this._closeSocket();
   this.connected = false;
   this.online = false;
+  this.buffer = [];
 };
 
 /* ---------------------------------------------------------- 流式组包解析 */
 
 MqttClient.prototype._feed = function (data) {
-  let bytes;
-  if (data instanceof ArrayBuffer) {
+  if (data === null || data === undefined) return;
+
+  let bytes = null;
+  const tag = Object.prototype.toString.call(data);
+
+  if (tag === "[object ArrayBuffer]") {
     bytes = new Uint8Array(data);
+  } else if (typeof ArrayBuffer !== "undefined" && ArrayBuffer.isView && ArrayBuffer.isView(data)) {
+    // Uint8Array / Buffer / DataView
+    bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+  } else if (typeof data.byteLength === "number" && !data.buffer) {
+    // 跨 realm 的 ArrayBuffer：instanceof 会失效，只能靠 byteLength 认
+    bytes = new Uint8Array(data);
+  } else if (typeof data === "string") {
+    // 文本帧兜底（巴法云发的是二进制帧，正常不会走到这里）
+    bytes = utf8Encode(data);
   } else {
-    // 极少数情况下可能收到字符串帧，按 UTF-8 还原成字节
-    bytes = utf8Encode(String(data));
+    this.emit("log", "收到无法识别的帧：" + tag);
+    return;
   }
+
+  if (!bytes || !bytes.length) return;
+  this.lastRx = Date.now();
+
   for (let i = 0; i < bytes.length; i++) this.buffer.push(bytes[i]);
+  // 正常报文都在几十字节内，缓冲区涨到 64KB 说明已经解析错位，直接丢掉重来
+  if (this.buffer.length > 65536) this.buffer = [];
 
   for (;;) {
     const pkt = this._takeOne();
@@ -329,6 +433,7 @@ MqttClient.prototype._dispatch = function (pkt) {
       return;
     }
     this.online = true;
+    this._clearConnectTimer();
     this.emit("log", "订阅成功: " + ((this.cfg && this.cfg.topics) || []).join(","));
     this.emit("online", null);
     return;

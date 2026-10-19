@@ -17,16 +17,34 @@ let sent = []; // 捕获所有发出的 ArrayBuffer
 let openCb = null;
 let msgCb = null;
 let closeCb = null;
+let taskMode = false; // true 时模拟「基础库支持 SocketTask」的形态
+let taskHandlers = {};
+
+/** 把字节数组包成和真机一致的 ArrayBuffer */
+function ab(bytes) {
+  const b = Buffer.from(bytes);
+  const out = new ArrayBuffer(b.length);
+  new Uint8Array(out).set(b);
+  return out;
+}
 
 global.wx = {
   connectSocket() {
-    return {
+    const task = {
       send(opt) {
         sent.push(Buffer.from(opt.data));
         if (opt.success) opt.success();
       },
       close() {}
     };
+    if (taskMode) {
+      ["onOpen", "onMessage", "onClose", "onError"].forEach(function (n) {
+        task[n] = function (cb) {
+          taskHandlers[n] = cb;
+        };
+      });
+    }
+    return task;
   },
   onSocketOpen(cb) {
     openCb = cb;
@@ -53,6 +71,7 @@ function eq(actual, expected, what) {
 function makeClient(cfg) {
   sent = [];
   openCb = msgCb = closeCb = null;
+  taskHandlers = {};
   const c = new MqttClient();
   c.connect(
     Object.assign(
@@ -201,6 +220,79 @@ function testUtf8Roundtrip() {
   console.log("  utf8 roundtrip         ok");
 }
 
+/**
+ * 重连时必须把上一轮的 connected / online 清掉。
+ * 否则旧 socket 悄悄断掉后，界面仍然允许发命令：日志里全是 →，一条 ← 都没有，
+ * 表现为「连接好久、怎么点都没反应」。
+ */
+function testReconnectResetsStaleState() {
+  const c = makeClient();
+  openCb();
+  deliver([0x20, 0x02, 0x00, 0x00]); // CONNACK 成功
+  deliver([0x90, 0x03, 0x00, 0x01, 0x00]); // SUBACK 成功
+  assert.strictEqual(c.online, true);
+  assert.strictEqual(c.connected, true);
+
+  c.connect({
+    url: "wss://bemfa.com:9504/wss",
+    clientId: "abc",
+    keepalive: 60,
+    topics: ["lock000"]
+  });
+
+  assert.strictEqual(c.connected, false, "重连必须清掉 connected");
+  assert.strictEqual(c.online, false, "重连必须清掉 online");
+  assert.deepStrictEqual(c.buffer, [], "重连必须清空残留缓冲");
+  checks++;
+  console.log("  reconnect resets       ok");
+}
+
+/** 基础库给的是 Uint8Array（ArrayBufferView）而不是 ArrayBuffer 时也要能解析 */
+function testFeedAcceptsByteView() {
+  const c = makeClient();
+  openCb();
+  deliver([0x20, 0x02, 0x00, 0x00]);
+
+  const got = [];
+  c.on("message", (m) => got.push(m.msg));
+  const pub = [0x30, 0x0e, 0x00, 0x07]
+    .concat(Array.from(Buffer.from("lock001")))
+    .concat(Array.from(Buffer.from("state")));
+
+  c._feed(new Uint8Array(pub)); // 关键：不是 ArrayBuffer
+  assert.deepStrictEqual(got, ["state"], "Uint8Array 帧应能还原出报文");
+  checks++;
+  console.log("  feed byte view         ok");
+}
+
+/** 有 SocketTask 时必须用 task.onXxx，不能再往全局 wx.onSocketXxx 上叠回调 */
+function testSocketTaskHandlers() {
+  taskMode = true;
+  taskHandlers = {};
+  const c = makeClient();
+
+  assert.ok(taskHandlers.onOpen, "应优先注册 SocketTask 的 onOpen");
+  assert.strictEqual(openCb, null, "不应再注册全局 onSocketOpen");
+
+  const got = [];
+  c.on("message", (m) => got.push(m.msg));
+
+  taskHandlers.onOpen();
+  taskHandlers.onMessage({ data: ab([0x20, 0x02, 0x00, 0x00]) });
+  taskHandlers.onMessage({
+    data: ab(
+      [0x30, 0x0f, 0x00, 0x07]
+        .concat(Array.from(Buffer.from("lock001")))
+        .concat(Array.from(Buffer.from("unlock")))
+    )
+  });
+  assert.deepStrictEqual(got, ["unlock"], "SocketTask 的 onMessage 应能正常收报文");
+
+  taskMode = false;
+  checks++;
+  console.log("  socket task handlers   ok");
+}
+
 /* ================================================================== main */
 
 console.log("mini-program MQTT client self-test");
@@ -213,6 +305,9 @@ testRejectedSuback();
 testDecodePublish();
 testSplitAndSticky();
 testUtf8Roundtrip();
+testReconnectResetsStaleState();
+testFeedAcceptsByteView();
+testSocketTaskHandlers();
 
 console.log("\nALL PASS  (" + checks + " checks)");
 
