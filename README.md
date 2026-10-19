@@ -5,12 +5,14 @@
 > 配套**微信小程序**，可以远程开关门、远程录入指纹、远程添加/删除卡片。
 
 <p align="center">
-  <img src="mini-program/screenshots/control-light.png" width="240">
+  <img src="mini-program/screenshots/control-light.png" width="200">
   &nbsp;
-  <img src="mini-program/screenshots/features-light.png" width="240">
+  <img src="mini-program/screenshots/features-light.png" width="200">
+  &nbsp;
+  <img src="mini-program/screenshots/settings-light.png" width="200">
 </p>
 
-<p align="center"><sub>小程序 · 控制 / 功能（浅色主题；深色主题与全部截图见「九、小程序」）</sub></p>
+<p align="center"><sub>小程序 · 控制 / 功能 / 设置（浅色主题；深色主题与全部截图见「九、小程序」）</sub></p>
 
 > 板子不在手边也能把小程序测通：仓库里带了一台 [**Windows 虚拟门锁**](sim/)，说的和固件是同一套协议，只要 Python 3、不用装别的，见下面 7.2 节。
 

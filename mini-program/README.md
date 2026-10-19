@@ -45,9 +45,12 @@ screenshots/                   各页面截图（下面）
 按 375 宽手机屏渲染后整页截下来的，改了界面重跑一次即可：
 
 ```bash
-node tools/render_preview.js --png          # 在仓库根目录执行
+node tools/render_preview.js --png --height 801      # 在仓库根目录执行，README 用的是这组
 node tools/render_preview.js --png --page settings --theme dark   # 只更新一页
 ```
+
+`--height 801` 会让三个页面截成统一的 375×801，README 里并排才不会一高一矮；
+内容超出时底部自动渐隐。去掉这个参数截的是整页长图。
 
 ## 自测
 

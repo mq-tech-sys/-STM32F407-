@@ -35,6 +35,8 @@ const OUT_DIR = path.resolve(ROOT, arg("out", "mini-program/screenshots"));
 const ONLY_PAGE = arg("page", "");
 const ONLY_THEME = arg("theme", "");
 const WANT_PNG = flag("png");
+/** 固定截图高度（px）。设了就把长页截成统一尺寸，用于 README 并排展示 */
+const FIXED_H = parseInt(arg("height", "0"), 10) || 0;
 
 /* ------------------------------------------------------------------ 假数据 */
 
@@ -280,6 +282,7 @@ const phoneCss = `
 html, body { margin: 0; padding: 0; background: #eef1f6; }
 body { width: 375px; }
 .phone { width: 375px; overflow: hidden; background: #fff; }
+${FIXED_H ? `.phone { position: relative; }` : ""}
 .phone .app { min-height: 0; padding-bottom: 18px; }
 /* 小程序 button 默认 block 撑满，HTML 里补一下 */
 .phone button { font: inherit; color: inherit; border: 0; background: transparent;
@@ -405,7 +408,26 @@ async function cdpShot(url, pngPath, width = 375, scale = 1) {
     expression: "Math.ceil(document.querySelector('.phone').getBoundingClientRect().height)",
     returnByValue: true
   });
-  const height = Math.max(200, ev.result.value || 812);
+  const natural = Math.max(200, ev.result.value || 812);
+
+  /* 固定高度截图：内容比目标高时，底部加一层渐隐，避免硬切 */
+  if (FIXED_H) {
+    const fade = `(function () {
+      var p = document.querySelector('.phone');
+      if (p && p.getBoundingClientRect().height > ${FIXED_H}) {
+        var d = document.createElement('div');
+        d.style.cssText = 'position:absolute;left:0;right:0;top:${FIXED_H - 76}px;height:76px;' +
+          'background:linear-gradient(to bottom,transparent,var(--bg,#f4f6fb) 86%);' +
+          'pointer-events:none;z-index:99';
+        p.appendChild(d);
+        return 1;
+      }
+      return 0;
+    })()`;
+    await send("Runtime.evaluate", { expression: fade, returnByValue: true });
+  }
+
+  const height = FIXED_H || natural;
   const shot = await send("Page.captureScreenshot", {
     format: "png",
     captureBeyondViewport: true,
