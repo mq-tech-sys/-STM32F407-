@@ -16,17 +16,17 @@
     <view class="field">
       <text class="field-label">ClientID</text>
       <input class="field-input" data-key="clientId" value="{{clientId}}" bindinput="onInput"
-             placeholder="小程序专用的独立 ID" />
+             placeholder="随便起个独立的 ID，别填私钥" />
     </view>
     <view class="field">
       <text class="field-label">用户名</text>
       <input class="field-input" data-key="username" value="{{username}}" bindinput="onInput"
-             placeholder="一般留空" />
+             placeholder="必填：巴法云 appID" />
     </view>
     <view class="field">
       <text class="field-label">密码</text>
       <input class="field-input" data-key="password" value="{{password}}" bindinput="onInput"
-             placeholder="一般留空" password="{{true}}" />
+             placeholder="必填：巴法云 secretKey" password="{{true}}" />
     </view>
     <view class="field">
       <text class="field-label">KeepAlive</text>
@@ -37,8 +37,13 @@
       · 服务器地址：小程序只能连 wss（加密 WebSocket），巴法云对应端口是 9504、路径 /wss。
     </view>
     <view class="field-hint">
-      · ClientID <text style="color:#dc2626">绝对不能和设备端用同一个</text>（设备端用的是私钥），
-      否则会把设备顶下线。若连接返回码是 4/5，去巴法云「连接密钥」页把 appID 与 secretKey 填到上面的用户名/密码。
+      · ClientID <text style="color:#dc2626">绝对不能填巴法云私钥</text>——私钥是设备端在用的，
+      同 ID 后连的会把设备顶下线。这里填个独立名字（如 wxmp_lock01）。
+    </view>
+    <view class="field-hint">
+      · 巴法云规则：<text style="color:#dc2626">ClientID 不等于私钥时，必须用 appID / secretKey 认证</text>。
+      所以上面的用户名填 <text style="color:#dc2626">appID</text>、密码填 <text style="color:#dc2626">secretKey</text>
+      （去巴法云「连接密钥」页复制），两个都别留空，否则连不上、返回码 4/5。
     </view>
     <view class="field-hint">· 设备端当前写死的私钥 / 主题：{{fwUid}} / {{fwTopic}}（改这里无效，要改固件头文件）</view>
 

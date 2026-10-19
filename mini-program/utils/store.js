@@ -16,6 +16,8 @@ const DEFAULTS = {
     // 要订阅/发布的主题（与固件里 BAFA_TOPIC_LOCK 一致）
     topic: "lock001",
     // 若 CONNACK 返回 4/5，说明需要用户名密码认证，去巴法云「连接密钥」页拿
+    // 巴法云规则：ClientID 不等于私钥时，必须用 username=appID / password=secretKey 认证。
+    // 小程序的 ClientID 是独立 ID（不是私钥），所以这两项是必填的，不能留空。
     username: "",
     password: "",
     keepalive: 60
